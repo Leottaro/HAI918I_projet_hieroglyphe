@@ -1,0 +1,5 @@
+Méthode détection hieroglyphe: https://www.researchgate.net/publication/332947534_Image_Based_Hieroglyphic_Character_Recognition
+
+Librairie de segmentation: https://github.com/facebookresearch/segment-anything
+Librairie générale de ML: https://github.com/pytorch/pytorch
+Librairie ML image: https://github.com/ultralytics/yolov8
