@@ -8,15 +8,18 @@ Depuis la racine du projet :
 
 ```bash
 python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install -r requirements.txt
 ```
 
 ## Utilisation
 
-Le point d'entrée prévu est `src/main.py` :
+Pour vérifier que les dépendances soient bien installées :
+```bash
+.venv/bin/python src/libtest.py
+```
 
+Pour exécuter le programme :
 ```bash
 .venv/bin/python src/main.py
 ```
@@ -26,6 +29,6 @@ Le point d'entrée prévu est `src/main.py` :
 Les dépendances Python sont listées dans `requirements.txt`. Le fichier est actuellement minimal car le code source est en cours de construction. Après l'ajout d'une bibliothèque, installez-la dans le venv puis mettez à jour la liste, par exemple :
 
 ```bash
-python -m pip install "paquet"
-python -m pip freeze > requirements.txt
+.venv/bin/python -m pip install "paquet"
+.venv/bin/python -m pip freeze > requirements.txt
 ```

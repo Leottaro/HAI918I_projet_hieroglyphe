@@ -3,3 +3,4 @@ Méthode détection hieroglyphe: https://www.researchgate.net/publication/332947
 Librairie de segmentation: https://github.com/facebookresearch/segment-anything
 Librairie générale de ML: https://github.com/pytorch/pytorch
 Librairie ML image: https://github.com/ultralytics/yolov8
+Librairie augmentation de données: https://github.com/albumentations-team/AlbumentationsX

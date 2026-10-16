@@ -14,5 +14,8 @@ from torch.optim.lr_scheduler import StepLR
 # YOLO
 from ultralytics import YOLO
 
+# Albumentations
+import albumentations as A
+
 # print
 print("All libraries can be imported !")
