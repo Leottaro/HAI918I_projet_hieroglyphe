@@ -2,33 +2,34 @@
 
 ## Abstract
 
-- contribution1: 建立更完整的数据集
+- Contribution 1: Build a more complete dataset.
 
-- contribution2: 组合分割与分类方法
-    * segementation: 把符号与背景、相邻符号区分开，便于单独提取
-    * classification: 判断提取出的符号属于哪个类别。
+- Contribution 2: Combine segmentation and classification methods.
+    * Segmentation: Separate symbols from the background and neighboring symbols so they can be extracted individually.
+    * Classification: Decide which class each extracted symbol belongs to.
 
 - ConvNeXt: CNN + Transformer
-  
-- cross validation voting: 通过不同训练／验证划分得到多个模型，再合并它们的预测
+
+- Cross-validation voting: Train several models using different training/validation splits, then combine their predictions.
 
 ## Introduction
- Method Based on Region
-Segmentation (MBRS) ->  Integrated Generic Segmentation Model (IGSM)
 
-###  two previous approaches:
+Method Based on Region Segmentation (MBRS) → Integrated Generic Segmentation Model (IGSM)
 
-- classical computer vision technique: not generalize
-- Yolo or Detectron2: d require more complex label-
-ing of hieroglyphs
+### Two previous approaches:
 
-### new idea:
-用提示引导通用 SAM，再单独分类:
-图像处理产生提示 → SAM 提取符号 → 分类模型识别符号。
+- Classical computer vision techniques: Do not generalize well.
+- YOLO or Detectron2: Require more complex labeling of hieroglyphs.
 
-**Generic**: SAM 已经学习了通用图像分割能力。作者希望利用这种能力，减少为象形文字专门准备精细分割标注、重新训练分割模型的工作。
+### New idea:
 
-**Focused**: 直接对整张图运行全局分割，得到的结果不能满足需求。因此，用视觉处理方法产生特定提示，让 SAM 关注局部区域，逐个提取符号
+Use prompts to guide the general-purpose SAM model, then classify the extracted symbols separately:
+
+Image processing generates prompts → SAM extracts symbols → A classification model recognizes the symbols.
+
+**Generic**: SAM has already learned general image segmentation capabilities. The authors want to use these capabilities to reduce the work needed to prepare detailed segmentation annotations specifically for hieroglyphs and retrain a segmentation model.
+
+**Focused**: Running global segmentation directly on the whole image does not give the results they need. Instead, image processing methods generate specific prompts to make SAM focus on local regions and extract symbols one by one.
 
 ## Proposed approach
 
@@ -36,138 +37,142 @@ ing of hieroglyphs
 
 **Gardiner's Sign List**
 
-根据象形文字所描绘的对象（如人物、动物、植物、人体部位等）将其划分为不同类别，并为每个符号分配唯一的编号。例如，A1 表示坐着的男性，G17 表示猫头鹰.
+Hieroglyphs are grouped according to the objects they depict, such as people, animals, plants, and body parts. Each symbol is assigned a unique code. For example, A1 represents a seated man, and G17 represents an owl.
 
-在基于深度学习的古埃及象形文字识别任务中，Gardiner 编码通常被用作图像分类的类别标签（Class Label），使模型能够学习识别不同的象形文字符号。
+In deep learning tasks for recognizing ancient Egyptian hieroglyphs, Gardiner codes are commonly used as class labels so the model can learn to recognize different hieroglyphic symbols.
 
-The name of the class is made up of an alphabetic character followed by a number. The Gardiner code is a unique identifier for each hieroglyph class.
+The class name consists of a letter followed by a number. The Gardiner code is a unique identifier for each hieroglyph class.
 
 **Egyptian Hieroglyphic Dataset**
 
-- 310 different hieroglyph classes and 13,729 image
+- 310 different hieroglyph classes and 13,729 images.
 
-- The hieroglyphs have been grouped in folders according to the structure and typology defined by the Egyptologist Gardiner
-The images obtained have been classified and labeled for each of Gardiner’s classe
+- The hieroglyphs are grouped into folders according to the structure and typology defined by the Egyptologist Gardiner. The images are classified and labeled according to Gardiner's classes.
 
-- The images obtained have different
-backgrounds and sizes -> preprocessing -> all the images have the same dimensions in X or Y. 
+- The images have different backgrounds and sizes → Preprocessing → All images have the same width or height.
 
 ### Segmentation
 
-| approach | principal | resultat |
+| Approach | Principle | Suitable cases |
 |---|---|---|
-| MBRS | 利用边缘和区域提取符号 | 符号与背景差异比较明显 |
-|IGSM | 用提示点引导预训练 SAM | 边界较难定义的图像 |
+| MBRS | Use edges and regions to extract symbols. | Symbols stand out clearly from the background. |
+| IGSM | Use prompt points to guide pretrained SAM. | Images where boundaries are harder to define. |
 
 #### MBRS
-![exemple MBRS](./note_imgs/MBRS_exemple.png)
-原图 → Canny 边缘检测 → 分析独立区域 → 找外接矩形 → 裁剪
 
-优点是流程直接，容易建立传统方法基线。
+![MBRS example](./note_imgs/MBRS_exemple.png)
 
-局限：图像中的边缘不一定都是符号边缘。 裂纹、阴影和背景纹理也可能产生边缘；一个符号的多段笔画，也可能被分成几个区域。
+Original image → Canny edge detection → Analyze separate regions → Find bounding boxes → Crop
+
+The advantage is that the process is straightforward and makes it easy to build a traditional baseline.
+
+Limitations: Not all edges in the image belong to symbols. Cracks, shadows, and background textures can also produce edges. Different strokes of a single symbol may also be split into several regions.
 
 #### IGSM
-![exemple IGSM](./note_imgs/IGSM_exemple.png)
 
-1. **Otsu 二值化与清理**: 将图像转换成前景／背景形式，突出刻痕、阴影等区域，再删除过小的区域，减少噪声。
-   
-2. **寻找连通区域并采样**: 在二值图中，把相互连接的前景像素归为区域，再从这些区域中随机选择提示点。 一个连通区域不一定对应一个完整符号：它可能只是一段笔画，也可能连接了多个部分。
-   
-3. **用提示点引导SAM**: 将原图与这些点的位置提供给 SAM，得到候选分割结果。作者发现单次分割可能遗漏部分区域，所以使用多个点，并组合分割结果。
-   
-4. **去重和过滤**: 使用 NMS 减少重复结果，并过滤尺寸不合理的区域，例如可能来自石碑破损的过大区域。
+![IGSM example](./note_imgs/IGSM_exemple.png)
 
-传统图像处理产生候选线索＋SAM 分割＋后处理。
+1. **Otsu binarization and cleanup**: Convert the image into foreground and background to highlight areas such as carved marks and shadows. Then remove very small regions to reduce noise.
 
-**分割结果怎样送入分类器？**
+2. **Find connected regions and sample points**: Group connected foreground pixels into regions in the binary image, then randomly select prompt points from these regions. A connected region does not necessarily correspond to a complete symbol: it may be just one stroke, or it may connect several parts.
 
-SAM 掩膜 → 确定符号范围 → 计算外接矩形 → 从原图裁剪带局部背景的小图 → 分类
+3. **Guide SAM with prompt points**: Give SAM the original image and the point coordinates to obtain candidate segmentation results. The authors found that a single segmentation pass could miss some regions, so they use multiple points and combine the results.
 
-作者能够去掉背景，只保留符号；但他们的实验发现，保留背景的矩形裁剪图分类更好，因此最终采用这种输入。
+4. **Remove duplicates and filter results**: Use NMS to reduce duplicate results and filter out regions with unsuitable sizes, such as oversized regions that may come from damage to the stone.
 
-**Organizing the hieroglyphs so they can then be read
-**
+Traditional image processing generates candidate clues + SAM segmentation + Postprocessing.
 
-reading from right to left and from top to bottom
+**How are segmentation results passed to the classifier?**
 
-not very inmortant for our projet
+SAM mask → Determine the symbol's extent → Compute a bounding box → Crop a small image with local background from the original image → Classification
 
-### classification
+The authors could remove the background and keep only the symbol. However, their experiments showed that rectangular crops retaining the background gave better classification results, so they use these crops as the final input.
 
+**Organizing the hieroglyphs so they can then be read**
+
+Read from right to left and from top to bottom.
+
+Not very important for our project.
+
+### Classification
 
 #### ConvNeXt
-ConvNeXt 是一种卷积神经网络架构，属于 CNN。 它来自 2022 年的论文 A ConvNet for the 2020s。该研究从 ResNet 出发，借鉴现代视觉网络的设计思路，改进卷积网络，形成 ConvNeXt 系列
 
+ConvNeXt is a convolutional neural network architecture, so it belongs to the CNN family. It comes from the 2022 paper A ConvNet for the 2020s. Starting from ResNet, the study borrows design ideas from modern vision networks to improve convolutional networks, resulting in the ConvNeXt family.
 
 #### CVV classification
-generalizability -> CVV
-模型对没有参与训练的新图片是否仍然能够正确分类。
 
-different similar classifiers trained on disjoint validation group
+Generalizability → CVV
 
-**validation set**
+Can the model still correctly classify new images that were not used during training?
 
-to avoid overfitting
+Several similar classifiers are trained using disjoint validation groups.
 
-| data | is update parameters | usage |
+**Validation set**
+
+Used to avoid overfitting.
+
+| Data | Updates parameters? | Usage |
 |---|---|---|
-|training set| yes | 计算训练损失，反向传播，更新参数 |
-|validation set| no | 观察泛化表现，选择模型状态或决定何时停止 |
+| Training set | Yes | Compute training loss, run backpropagation, and update parameters. |
+| Validation set | No | Monitor generalization, select a model checkpoint, or decide when to stop. |
 
-**early stopping**
+**Early stopping**
 
-通常监测验证表现，在若干轮没有改善后停止，并保留最佳检查点
+Usually, validation performance is monitored. Training stops after several epochs without improvement, and the best checkpoint is kept.
 
-**data distribution**
+**Data distribution**
 
 ![CVV schema](./note_imgs/cvv_schema.png)
 
-training data set into different training and validation slot
+Split the training dataset into different training and validation folds.
 
-* $\tau$：用于训练和验证的完整开发数据；
-* $T_i$: 第 $i$ 个模型的训练集；
-* $V_i$: 第 $i$ 个模型的验证集；
-* $k$: 模型数量
+* $\tau$: The full development dataset used for training and validation.
+* $T_i$: The training set for model $i$.
+* $V_i$: The validation set for model $i$.
+* $k$: The number of models.
 
 $$
 \tau = \bigcup_{i=1}^{k} V_i
 $$
-各验证组共同覆盖完整开发数据。
+
+Together, the validation groups cover the full development dataset.
 
 $$
 \bigcap_{i=1}^{k} V_i = \varnothing
 $$
-没有样本同时存在于所有验证组中
+
+No sample appears in all validation groups at the same time.
 
 $$
 [\tau = T_i \cup V_i] \quad \forall i \in [1,k]
 $$
-对每个模型来说，训练集与验证集合起来，就是完整开发数据
+
+For each model, its training and validation sets together make up the full development dataset.
 
 $$
 [T_i \cup V_i = \varnothing] \quad \forall i \in [1,k]
 $$
-同一个模型的训练集和验证集没有交集
 
+A model's training and validation sets do not overlap.
 
-**output of all models**
+**Output of all models**
 
-对一张输入图片 $x_i$，第 $i$ 个模型输出：
+For an input image $x_i$, model $i$ outputs:
+
 $$
 \mathbf p_i(x)=
 [p_{i1}(x),p_{i2}(x),\ldots,p_{in}(x)]
 $$
 
-* $i$ 是模型编号；
-* $j$ 是类别编号；
-* $n$ 是类别总数；
-* $p_{ij}(x)$ 是模型 $i$ 认为图片属于类别 $j$ 的概率
+* $i$ is the model index.
+* $j$ is the class index.
+* $n$ is the total number of classes.
+* $p_{ij}(x)$ is the probability assigned by model $i$ to image $x$ belonging to class $j$.
 
+**Soft voting**
 
-**soft voting**
-
-对每个类别，将各模型的概率加权相加，再选择得分最高的类别
+For each class, add up the models' probabilities with weights, then choose the class with the highest score.
 
 $$
 q_j(x)=\sum_{i=1}^{k}w_i\,p_{ij}(x)
@@ -177,48 +182,120 @@ $$
 S(x)=c_{\arg\max_j q_j(x)}
 $$
 
-其中 $c_j$ 是第 $j$ 个类别的标签，$\arg\max$ 返回最大得分对应的类别编号。
+Here, $c_j$ is the label of class $j$, and $\arg\max$ returns the index of the class with the highest score.
 
 $$
 w_i=\frac{1}{k}
 $$
 
+**Hard voting**
 
-**hard voting**
 $$
 bij(x) =
 \begin{cases}
-1,&j\text{ 是模型 }i\text{ 预测概率最大的类别}\\
-0,&\text{其他类别}
+1,&j\text{ is the class with the highest probability predicted by model }i\\
+0,&\text{otherwise}
 \end{cases}
 $$
 
-把每个模型的概率向量转换成投票向量
+Convert each model's probability vector into a voting vector.
 
 $$
 H(x)=c_{\arg\max_j\sum_{i=1}^{k}w_i\,b_{ij}(x)}
 $$
 
-然后对这些票数加权求和：
+Then add up these votes with weights.
 
-**different**
-* 硬投票只保留每个模型的第一选择；
-* 软投票保留各类别的概率分配。
-  
-**Random data augmentatio**
+**Difference**
 
-* 样本数量低于某个门槛的类别，增加增强样本；
-* 样本过多的类别，删除部分图片；
-* 每类训练图片的最大数量设为平均每类数量的两倍。
+* Hard voting keeps only each model's first choice.
+* Soft voting keeps the probability distribution across classes.
 
-增强与数量调整共同进行。不是把所有类别机械地复制到相同数量，也不是只做随机变换。
+**Random data augmentation**
 
-| augmentation | setting |
+* For classes with fewer samples than a certain threshold, add augmented samples.
+* For classes with too many samples, remove some images.
+* Set the maximum number of training images per class to twice the average number per class.
+
+Augmentation and sample count adjustments are done together. This does not mean simply duplicating all classes to the same size or only applying random transformations.
+
+| Augmentation | Setting |
 |---|---|
-| translation horizontal and vertical | maximum 10 pixels |
-| small random rotations | 5 degrees |
-|  random scalin | 0.90～1.10 |
-| horizontal flipping | 
+| Horizontal and vertical translation | Maximum 10 pixels |
+| Small random rotations | 5 degrees |
+| Random scaling | 0.90–1.10 |
+| Horizontal flipping | |
 
-The total number of images in the
-training set was 9359 and, after data augmentation, 18,71
+The total number of images in the training set was 9359 and, after data augmentation, 18,71.
+
+## Experiments and results
+
+### Individual classification results
+
+Accuracy rises quickly during the first few epochs, showing that the model is learning.
+Training accuracy then approaches 100%.
+Validation accuracy stays around 96%–97%, with small fluctuations.
+
+Training loss keeps decreasing and ends up very low.
+Validation loss drops at first, then mostly levels off.
+Further reductions in training loss later on do not lead to the same level of improvement on the validation set.
+
+The model's best validation performance is at epoch 13, with an accuracy of about 0.967 and a loss of about 0.150.
+
+#### Results of CVV
+
+| Metric | Usual meaning in classification |
+|---|---|
+| **Accuracy** | The proportion of all test samples that are correctly predicted. |
+| **Balanced Accuracy** | Usually the average recall across classes, reducing the influence of larger classes on the result. |
+| **Precision** | For a given class, how many samples predicted as that class actually belong to it. |
+| **Recall** | How many of a class's actual samples are correctly recognized. |
+| **F1** | Combines precision and recall. |
+
+* The five individual models have similar accuracies, around 92.6%–93.3%.
+* Soft voting reaches 96.0%, an improvement of 2.7 percentage points over the best individual model. So, in this test, combining predictions does perform better than using a single model.
+* Soft voting performs slightly better than hard voting in this table.
+
+**Confusion matrix**
+
+* Vertical axis, Actual: The true class.
+* Horizontal axis, Predicted: The predicted class.
+* Diagonal: Correct predictions.
+* Off-diagonal: Confusion between classes.
+
+### Individual segmentation results
+
+Text region → MBRS or IGSM → Extract individual symbols → CVV classification → Reproduce with JSesh
+
+![Individual segmentation example](./note_imgs/individual_segementation.png)
+
+**ALL and ONLY**
+
+| Scope | Which symbols are evaluated? |
+|---|---|
+| **ALL** | All symbols in the stele, including classes not covered by the classification dataset. |
+| **ONLY** | Only symbols whose classes are covered by the classification dataset. |
+
+| Method | Scope | Accuracy | F1 |
+|---|---|---:|---:|
+| MBRS + soft voting | ALL | 0.712 | 0.539 |
+| IGSM + soft voting | ALL | **0.893** | **0.799** |
+| MBRS + soft voting | ONLY | 0.759 | 0.559 |
+| IGSM + soft voting | ONLY | **0.952** | **0.908** |
+
+IGSM clearly outperforms MBRS under both ALL and ONLY. Based on this, the authors consider SAM-assisted extraction more effective in this experiment.
+
+IGSM improves from 89.3% under ALL to 95.2% under ONLY. This shows that some of the difficulty comes from classes not covered by the training data.
+
+Better extraction can improve the recognition that follows.
+
+Even with good extraction, limited class coverage still restricts the system's performance.
+
+### Comparison with state-of-the-art datasets and hieroglyph recognition approaches
+
+| Method, as reported in Table 8 | Dataset | Images | Classes | Reported accuracy |
+|---|---|---:|---:|---:|
+| HOG + SDM | Franken | 3,993 | 161 | 0.855 |
+| Detectron2 + Glyphnet | Barucci | 4,309 | 40 | 0.934 |
+| R-CNN + SiameseNN | Sobhy | 4,210 | 172 | 0.885 |
+| IGSM + CVV-SV | This paper | 13,169 | 164 | 0.940 |
