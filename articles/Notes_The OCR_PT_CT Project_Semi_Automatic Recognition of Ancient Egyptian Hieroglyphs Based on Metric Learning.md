@@ -587,3 +587,51 @@ The encoder always outputs 128 dimensions, regardless of whether there are curre
 A new class can therefore be added by preparing labeled reference images, calculating its prototype, and adding it to the library, without having to modify a Softmax layer with a fixed number of output classes.
 
 However, this can only work well if the encoder already preserves the features needed to distinguish that class. Metric learning does not automatically give a correct name to a class that has no reference prototype.
+
+
+## Experimental Results
+
+| Short name | Method |
+|---|---|
+| **Trad-ML** | Handcrafted features such as HOG and projections + Linear SVM |
+| **CNN-End2End** | MobileNetV2 + Classification head, trained with weighted cross-entropy |
+| **Deep-MML** | Learn features with a Siamese network, then classify using class prototypes |
+
+### two experiment and two test data
+* 140 classes: At least 25 samples per class.
+* 222 classes: At least 2 samples per class.
+
+| Test set | Input conditions | What does it mainly evaluate? |
+|---|---|---|
+| **Test 15%** | Pre-segmented single-symbol images randomly held out for testing | The classifier's ability to recognize new images |
+| **Test 10 pages** | 10 complete held-out pages, requiring segmentation first | The system's performance on new pages |
+
+### Balanced Accuracy
+
+$$
+\operatorname{BalancedAccuracy}
+=
+\frac{1}{C}\sum_{c=1}^{C}\operatorname{Recall}_c
+$$
+
+Calculate recall separately for each class, then take the average.
+
+| Method | 140 classes: Random test | 222 classes: Random test | 140 classes: Held-out pages | 222 classes: Held-out pages |
+|---|---:|---:|---:|---:|
+| **Deep-MML** | **97.70%** | **95.90%** | **93.50%** | **88.90%** |
+| Trad-ML | 92.46% | 89.64% | 88.43% | 78.81% |
+| CNN-End2End | 93.87% | 70.70% | 83.93% | 54.79% |
+
+### Explainability in Deep Metric Learning
+
+The authors analyze the 128-dimensional features learned through metric learning.
+Since the 128-dimensional space cannot be plotted directly, they use t-SNE to map it into two dimensions, producing Figure 13.
+
+![T-SNE2D](./note_imgs/T-SNE2D.png)
+
+* Each point represents a symbol sample.
+* Colors represent classes.
+* Ellipses and other markers help show the distribution of each class.
+
+Figures 14–17 zoom in on several error cases to connect classification confusions with the feature distribution. They show groups of classes that lie close together in the reduced-dimensional feature space. Looking at the symbols, these classes seem very similar; some even look identical to me, although they still remain somewhat separated in the plots.
+
