@@ -1,6 +1,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/venv,latex,python,dotenv
 # Edit at https://www.toptal.com/developers/gitignore?templates=venv,latex,python,dotenv
 
+# Downloaded datasets
+/data/
+
 ### dotenv ###
 .env
 
