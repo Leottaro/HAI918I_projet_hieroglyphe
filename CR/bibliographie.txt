@@ -1,5 +1,15 @@
+# Papier
 Méthode détection hieroglyphe: https://www.researchgate.net/publication/332947534_Image_Based_Hieroglyphic_Character_Recognition
 
+A Deep Learning Approach to Ancient Egyptian Hieroglyphs Classification: 10.1109/ACCESS.2021.3110082
+
+Recognition of Egyptian hieroglyphic texts through focused generic segmentation and cross-validation voting: https://doi.org/10.1016/j.asoc.2025.112793
+
+The OCR-PT-CT Project: Semi-Automatic Recognition of Ancient Egyptian Hieroglyphs Based on Metric Learning: https://doi.org/10.48550/arXiv.2512.24197
+
+
+
+# Librarie
 Librairie de segmentation: https://github.com/facebookresearch/segment-anything
 Librairie générale de ML: https://github.com/pytorch/pytorch
 Librairie ML image: https://github.com/ultralytics/yolov8
