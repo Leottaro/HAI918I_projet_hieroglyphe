@@ -3,7 +3,7 @@ from collections import Counter
 
 from PIL import Image
 from torch import Tensor
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import ToTensor
 
 from sklearn.model_selection import train_test_split
@@ -122,3 +122,22 @@ def split_dataset(image_paths: list[Path], seed: int = SEED,) -> tuple[list[Path
     )
     
     return train_paths, val_paths, test_paths
+
+
+# create a DataLoader for the given image paths for pytroch
+def create_dataloader(image_paths: list[Path],
+    class_to_idx: dict[str, int],
+    batch_size: int,
+    shuffle: bool,
+    num_workers: int = 0,
+) -> DataLoader:
+    image_dataset: HieroglyphDataset = HieroglyphDataset(image_paths, class_to_idx)
+
+    dataloader: DataLoader = DataLoader(
+        image_dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        num_workers=num_workers,
+    )
+
+    return dataloader

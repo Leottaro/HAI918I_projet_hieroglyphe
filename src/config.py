@@ -17,3 +17,5 @@ TOP_K_CLASSES = 40  # the top k classes that we want to classify
 TRAIN_RATIO: float = 0.70
 VAL_RATIO: float = 0.15
 TEST_RATIO: float = 0.15
+
+BATCH_SIZE: int = 32

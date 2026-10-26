@@ -24,15 +24,45 @@ def main() -> None:
         SEED,
     )
 
+    train_loader: DataLoader = create_dataloader(
+        image_paths=train_image_paths,
+        class_to_idx=class_to_idx,
+        batch_size=BATCH_SIZE,
+        shuffle=True,
+        num_workers=0
+    )
+
+    val_loader: DataLoader = create_dataloader(
+        image_paths=val_image_paths,
+        class_to_idx=class_to_idx,
+        batch_size=BATCH_SIZE,
+        shuffle=True,
+        num_workers=0
+    )
+
+    test_loader: DataLoader = create_dataloader(
+        image_paths=test_image_paths,
+        class_to_idx=class_to_idx,
+        batch_size=BATCH_SIZE,
+        shuffle=True,
+        num_workers=0
+    )
+
+
     print(f"Images: {len(image_paths)}")
     print(f"Labels: {len(label_counts)}")
-    print(f"Selected classes: {len(selected_classes)}")
+    print(f"\nSelected classes: {len(selected_classes)}")
     print(class_to_idx)
     print(f"Selected class numbers: {len(selected_image_paths)}")
-    print(f"Train set numbers: {len(train_image_paths)}")
+    print(f"\nTrain set numbers: {len(train_image_paths)}")
     print(f"Val set numbers: {len(val_image_paths)}")
     print(f"Test set numbers: {len(test_image_paths)}")
 
+    for images, labels in train_loader:
+        print(f"\nImages shape: {images.shape}")
+        print(f"Labels shape: {labels.shape}")
+        print(f"Labels dtype: {labels.dtype}")
+        break
 
 if __name__ == "__main__":
     main()
