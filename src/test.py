@@ -81,7 +81,7 @@ def main() -> None:
         depth=3,
         mode="eval",
     )
-    
+
 
 if __name__ == "__main__":
     main()

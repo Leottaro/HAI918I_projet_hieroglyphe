@@ -3,9 +3,6 @@ import torch
 from torch import nn, Tensor
 from torchinfo import summary
 
-device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
-print(f"Using {device} device")
-
 class Glyphnet(nn.Module):
     def __init__(self, num_classes=40):
         super().__init__()
@@ -24,7 +21,7 @@ class Glyphnet(nn.Module):
             nn.BatchNorm2d(
                 num_features=64,
                 eps=1e-3,
-                momentum=0.01,
+                momentum=0.1,
             ),
             nn.MaxPool2d(
                 kernel_size=3,
@@ -43,7 +40,7 @@ class Glyphnet(nn.Module):
             nn.BatchNorm2d(
                 num_features=64,
                 eps=1e-3,
-                momentum=0.01,
+                momentum=0.1,
             ),
             nn.MaxPool2d(
                 kernel_size=3,
@@ -77,7 +74,7 @@ class Glyphnet(nn.Module):
             nn.BatchNorm2d(
                 num_features=128,
                 eps=1e-3,
-                momentum=0.01,
+                momentum=0.1,
             ),
             nn.ReLU(),
 
@@ -104,7 +101,7 @@ class Glyphnet(nn.Module):
             nn.BatchNorm2d(
                 num_features=128,
                 eps=1e-3,
-                momentum=0.01,
+                momentum=0.1,
             ),
             nn.MaxPool2d(
                 kernel_size=3,
@@ -138,7 +135,7 @@ class Glyphnet(nn.Module):
             nn.BatchNorm2d(
                 num_features=128,
                 eps=1e-3,
-                momentum=0.01,
+                momentum=0.1,
             ),
             nn.ReLU(),
 
@@ -165,7 +162,7 @@ class Glyphnet(nn.Module):
             nn.BatchNorm2d(
                 num_features=128,
                 eps=1e-3,
-                momentum=0.01,
+                momentum=0.1,
             ),
             nn.MaxPool2d(
                 kernel_size=3,
@@ -199,7 +196,7 @@ class Glyphnet(nn.Module):
             nn.BatchNorm2d(
                 num_features=256,
                 eps=1e-3,
-                momentum=0.01,
+                momentum=0.1,
             ),
             nn.ReLU(),
 
@@ -226,7 +223,7 @@ class Glyphnet(nn.Module):
             nn.BatchNorm2d(
                 num_features=256,
                 eps=1e-3,
-                momentum=0.01,
+                momentum=0.1,
             ),
             nn.MaxPool2d(
                 kernel_size=3,
@@ -260,7 +257,7 @@ class Glyphnet(nn.Module):
             nn.BatchNorm2d(
                 num_features=256,
                 eps=1e-3,
-                momentum=0.01,
+                momentum=0.1,
             ),
             nn.ReLU(),
 
@@ -287,7 +284,7 @@ class Glyphnet(nn.Module):
             nn.BatchNorm2d(
                 num_features=256,
                 eps=1e-3,
-                momentum=0.01,
+                momentum=0.1,
             ),
             nn.MaxPool2d(
                 kernel_size=3,
@@ -321,7 +318,7 @@ class Glyphnet(nn.Module):
             nn.BatchNorm2d(
                 num_features=512,
                 eps=1e-3,
-                momentum=0.01,
+                momentum=0.1,
             ),
             nn.ReLU(),
             # Global avarage pooling
@@ -347,24 +344,3 @@ class Glyphnet(nn.Module):
         logits = self.block6(output)
         
         return logits
-
-
-def main():
-    model = Glyphnet(40).to(device)
-    model.eval()
-
-    # print(model)
-
-    x: Tensor = torch.randn(1, 1, 75, 50, device=device,)
-
-    summary(
-        model,
-        input_data=x,
-        col_names=("input_size", "output_size", "num_params"),
-        depth=3,
-        mode="eval",
-    )
-
-
-if __name__ == "__main__":
-    main() 
