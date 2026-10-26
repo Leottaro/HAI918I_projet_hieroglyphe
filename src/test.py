@@ -7,6 +7,8 @@ from config import *
 from inspect_data import *
 from dataset import *
 
+from glyphnet import *
+
 
 def main() -> None:
     image_paths: list[Path] = find_images(DATA_DIR)
@@ -63,6 +65,23 @@ def main() -> None:
         print(f"Labels shape: {labels.shape}")
         print(f"Labels dtype: {labels.dtype}")
         break
+
+    num_classes: int = len(selected_classes)
+
+    model = Glyphnet(num_classes).to(device)
+
+    model.eval()
+        
+    x: Tensor = torch.randn(1, 1, 75, 50, device=device,)
+    
+    summary(
+        model,
+        input_data=x,
+        col_names=("input_size", "output_size", "num_params"),
+        depth=3,
+        mode="eval",
+    )
+    
 
 if __name__ == "__main__":
     main()
