@@ -1,3 +1,5 @@
+import json
+
 import torch
 from torch import nn, Tensor
 from torch.optim import Adam
@@ -10,6 +12,7 @@ from inspect_data import *
 from dataset import *
 
 from glyphnet import *
+
 
 
 print(f"Using {device} device")
@@ -67,7 +70,9 @@ def test_loop(dataloader, model, loss_fn) -> tuple[float, float]:
     return average_loss, accuracy
 
 
-def train_epochs(train_loader, val_loader, model, loss_fn, optimizer):
+def train_epochs(train_loader, val_loader, model, loss_fn, optimizer) -> list[dict[str, int | float]]:
+    history: list[dict[str, int | float]] = []
+    
     for epoch in range(EPOCHS):
         print(f"\nEpoch {epoch + 1}/{EPOCHS}")
 
@@ -80,12 +85,24 @@ def train_epochs(train_loader, val_loader, model, loss_fn, optimizer):
 
         val_loss, val_accuracy = test_loop(val_loader, model, loss_fn)
 
+        history.append(
+            {
+                "epoch": epoch + 1,
+                "train_loss": train_loss,
+                "train_accuracy": train_accuracy,
+                "val_loss": val_loss,
+                "val_accuracy": val_accuracy,
+            }
+        )
+
         print(
             f"Val loss: {val_loss:.4f}, "
             f"accuracy: {val_accuracy:.2%}"
         )
 
     print("\nFinish to train model!")
+
+    return history
 
 
 def main():
@@ -141,12 +158,35 @@ def main():
         lr=LEARNING_RATE,
     )
 
-    train_epochs(
+    history = train_epochs(
         train_loader=train_loader,
         val_loader=val_loader,
         model=model,
         loss_fn=loss_fn,
         optimizer=optimizer,
+    )
+
+    training_record: dict[str, object] = {
+        "config": {
+            "seed": SEED,
+            "epochs": EPOCHS,
+            "batch_size": BATCH_SIZE,
+            "learning_rate": LEARNING_RATE,
+            "image_size": IMAGE_SIZE,
+            "num_classes": len(class_to_idx),
+            "device": str(device),
+        },
+        "history": history,
+    }
+
+    output_dir: Path = PROJECT_ROOT / "outputs"
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    history_path: Path = output_dir / f"training_history_epochs_{EPOCHS}.json"
+
+    history_path.write_text(
+        data=json.dumps(training_record, indent=2),
+        encoding="utf-8"
     )
 
     print("\nStart to test model!")
@@ -158,11 +198,8 @@ def main():
         f"accuracy: {test_accuracy:.2%}"
     )
 
-    output_dir: Path = PROJECT_ROOT / "outputs"
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    output_path = output_dir / "glyphnet_last.pt"
-
+    model_path = output_dir / f"glyphnet_epochs_{EPOCHS}.pt" 
+ 
     torch.save(
         {
             "model_state_dict": model.state_dict(),
@@ -170,10 +207,10 @@ def main():
             "epoch": EPOCHS,
             "image_size": IMAGE_SIZE,
         },
-        output_path,
+        model_path,
     )
 
-    print(f"Model saved to: {output_path}")
+    print(f"Model saved to: {model_path}")
 
 
 if __name__ == "__main__":

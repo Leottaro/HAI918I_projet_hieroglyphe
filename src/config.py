@@ -25,4 +25,4 @@ BATCH_SIZE: int = 32
 
 LEARNING_RATE: float = 1e-3 
 
-EPOCHS = 30
+EPOCHS = 15
