@@ -1,0 +1,13 @@
+name: glyphnet-macos
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - "torch==2.14.1"
+      - "torchvision==0.29.1"
+      - "torchinfo==1.8.0"
+      - "Pillow==13.0.0"
+      - "scikit-learn==1.9.1"
+      - "matplotlib==3.11.2"
