@@ -29,18 +29,21 @@ class DatasetProcessWindow(QMainWindow):
         # set central widget vertical layout 
         layout: QVBoxLayout= QVBoxLayout(central_widget)
 
-        # initial open button, central widget as father
+        # initial open and fit button, central widget as father
         open_button: QPushButton = QPushButton("Open image", central_widget)
-
+        fit_button: QPushButton = QPushButton("Fit image",central_widget,)
+        
         # initial ImageCanvas, central widget as father
         self.canvas: ImageCanvas = ImageCanvas(central_widget)
 
         # add open button and ImageCanvas into layout
         layout.addWidget(open_button)
+        layout.addWidget(fit_button)
         layout.addWidget(self.canvas, stretch=1)    # strech=1: it will take all the rest place
 
-        # connect signal for open button
+        # connect signal for buttons
         open_button.clicked.connect(self.open_image)
+        fit_button.clicked.connect(self.canvas.fit_image)
 
         self.statusBar().showMessage("please select a image")
 
