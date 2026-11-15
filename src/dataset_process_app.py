@@ -32,6 +32,8 @@ class DatasetProcessWindow(QMainWindow):
         # initial open and fit button, central widget as father
         open_button: QPushButton = QPushButton("Open image", central_widget)
         fit_button: QPushButton = QPushButton("Fit image",central_widget,)
+        delete_button: QPushButton = QPushButton("Delete selected",central_widget,)
+        clear_button: QPushButton = QPushButton("Clear prompts",central_widget,)
         
         # initial ImageCanvas, central widget as father
         self.canvas: ImageCanvas = ImageCanvas(central_widget)
@@ -39,11 +41,15 @@ class DatasetProcessWindow(QMainWindow):
         # add open button and ImageCanvas into layout
         layout.addWidget(open_button)
         layout.addWidget(fit_button)
+        layout.addWidget(delete_button)
+        layout.addWidget(clear_button)
         layout.addWidget(self.canvas, stretch=1)    # strech=1: it will take all the rest place
 
         # connect signal for buttons
         open_button.clicked.connect(self.open_image)
         fit_button.clicked.connect(self.canvas.fit_image)
+        delete_button.clicked.connect(self.canvas.delete_selected_prompts)
+        clear_button.clicked.connect(self.canvas.clear_prompts)
 
         self.statusBar().showMessage("please select a image")
 

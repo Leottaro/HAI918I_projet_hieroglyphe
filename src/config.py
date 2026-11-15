@@ -8,6 +8,8 @@ PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
 
 DATA_DIR: Path = PROJECT_ROOT / "data" / "glyphnet_data" / "Preprocessed"
 
+KA_DATA_DIR: Path = PROJECT_ROOT / "data" / "Image_DAO_Sith"
+
 # Image dimension [height, width]
 IMAGE_SIZE: tuple[int, int] = (75, 50)
 
