@@ -3,7 +3,7 @@
 
 #let presentation-info = (
   title: [Projet IMAGE — Hiéroglyphes],
-  subtitle: [Compte rendu 2],
+  subtitle: [Compte rendu 3],
   author: [Léo HAFDANE · Mathys CHAMPENOIS · Yaqi ZHANG],
   institution: [Université de Montpellier],
 )
@@ -51,14 +51,14 @@
 
   *Augmentation de données*
 
-  + Implémentation d'une augmentation de données déterministe basée sur la librairie #link("https://github.com/albumentations-team/AlbumentationsX")[Albumentations]
-  + Test de l'effet de l'augmentation sur Glyphnet
+  + Implémentation d'une augmentation de données déterministe basée sur la librairie #link("https://github.com/albumentations-team/AlbumentationsX")[Albumentations]@albumentationsx
+  + Test de l'effet de l'augmentation sur Glyphnet @barucci2021glyphnet
 
   #v(20pt)
   *Travail sur le jeu de données*
 
   + Récupération des données fournies pour le projet
-  + Début d'un outil pour préprocess les imagettes
+  + Début du développement d’un outil de prétraitement des imagettes basé sur la méthode proposée dans l’article@fuentesferrer2025cvv.
 ]
 
 == Comparaison avec et sans augmentations de données
@@ -108,6 +108,57 @@
 
 + Risque que le modèle apprenne le contexte ou le fond plutôt que le signe.
 
+== Début d'un outil pour préparer le jeu de données
+#[
+  #set text(size: 18pt)
+  #set par(leading: 0.5em)
+  #set enum(spacing: 24pt)
+  #v(10pt)
+*Objectif*
+
+Développer une interface graphique basée sur Qt, permettant de:
++ effectuer un découpage automatique préliminaire à l’aide d’une méthode de segmentation automatique. 
++ Les résultats seront ensuite vérifiés et ajustés manuellement, avant de procéder à l’annotation manuelle des données.
+
+#v(0.5cm)
+*Auto segementation*
+#text(size: 16pt,)[(Voir un exemple dans @exemple-auto-segmentation)]
++ Binarisation par la méthode d’Otsu puis nettoyage de l’image binaire.
++ Recherche des composantes connexes.
++ Échantillonnage aléatoire d’un nombre fixe de points dans chaque composante.
++ Utiliser ces points pour effectuer une segmentation automatique à l’aide du modèle SAM@sam
++ Obtenir la boîte englobante de l’objet cible, puis l’ajuster à des dimensions fixes.
+
+
+
+]
+
+== Début d'un outil pour préparer le jeu de données
+#[
+
+  #v(10pt)
+
+  #show figure.caption: set text(size: 15pt, fill: rgb("#555555"),)
+
+  #cols(align: horizon)[
+    #set text(size: 24pt)
+    #set par(leading: 1em)
+    #set enum(spacing: 24pt)
+    *État d’avancement actuel*
+
+    - Chargement des images terminé.
+    - Ajout de points de guidage positifs et négatifs sur les images implémenté.
+    - Ajout de boîtes de sélection sur les images implémenté.
+    - Déplacement et suppression des points de guidage et des boîtes de sélection implémentés.
+  ][
+    #align(center)[
+      #figure(
+        image("../common/images/exemple_auto_segmentation.png", width: 100%),
+        caption: [Exemple d'auto segmentation.],
+      ) <exemple-auto-segmentation>
+    ]
+  ]
+]
 
 == Prochaines étapes
 
@@ -124,6 +175,8 @@
   + Étudier les méthodes d’apprentissage adaptées à un faible nombre d’exemples.
 
   + Considérer les solutions de détection de formes généralistes
+
+  + Poursuivre le développement de l'outil de préparation du jeu de données, puis entraîner le modèle sur ces données.
 ]
 
 == Références
