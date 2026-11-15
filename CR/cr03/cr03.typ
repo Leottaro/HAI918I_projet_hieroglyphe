@@ -100,6 +100,13 @@
 
 == Problèmes avec les données fournies
 
++ Tailles d’images très variables.
+
++ Taille et position des signes variables dans l’image.
+
++ Plusieurs signes peuvent apparaître dans une même image.
+
++ Risque que le modèle apprenne le contexte ou le fond plutôt que le signe.
 
 
 == Prochaines étapes
