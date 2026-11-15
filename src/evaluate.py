@@ -221,6 +221,7 @@ def main():
         image_paths=test_image_paths,
         class_to_idx=trained_class_to_idx,
         batch_size=BATCH_SIZE,
+        augment=False,
         shuffle=False,
         num_workers=0
     )

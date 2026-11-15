@@ -8,6 +8,9 @@ from torchvision.transforms import ToTensor
 
 from sklearn.model_selection import train_test_split
 
+import albumentations as A
+import numpy as np
+
 from config import TRAIN_RATIO, VAL_RATIO, TEST_RATIO, SEED
 
 # build a uniform mapping from str label to int 
@@ -27,26 +30,30 @@ def build_class_to_idx(selected_classes: list[str]) -> dict[str, int]:
 # custom dataset class for pytorch
 class HieroglyphDataset(Dataset):
 
-    def __init__(self, image_paths: list[Path], class_to_idx: dict[str, int]) :
+    def __init__(self, image_paths: list[Path], class_to_idx: dict[str, int], transforms: list[A.BasicTransform]) :
         super().__init__()
         self.image_paths: list[Path] = image_paths
+        self.transforms: list[A.BasicTransform] = transforms
         self.class_to_idx: dict[str, int] = class_to_idx
         self.to_tensor: ToTensor = ToTensor()
 
 
     def __len__(self) -> int:
-        return len(self.image_paths)
+        return len(self.image_paths) * (1 + len(self.transforms))
 
 
     def __getitem__(self, index: int) -> tuple[Tensor, int]:
-        image_path: Path = self.image_paths[index]
+        img_index = index % len(self.image_paths)
+        transform_index = index // len(self.image_paths)
+        image_path: Path = self.image_paths[img_index]
         class_name: str = image_path.stem.rsplit("_", 1)[-1]
         label: int = self.class_to_idx[class_name]
 
         with Image.open(image_path) as image:
-            gray_image: Image.Image = image.convert("L")
-            image_tensor: Tensor = self.to_tensor(gray_image)
-
+            if transform_index > 0:
+                image = Image.fromarray(self.transforms[transform_index-1](image=np.asarray(image))["image"])
+                
+            image_tensor: Tensor = self.to_tensor(image.convert("L"))
             return  image_tensor, label
 
 
@@ -128,10 +135,26 @@ def split_dataset(image_paths: list[Path], seed: int = SEED,) -> tuple[list[Path
 def create_dataloader(image_paths: list[Path],
     class_to_idx: dict[str, int],
     batch_size: int,
+    augment: bool,
     shuffle: bool,
     num_workers: int = 0,
 ) -> DataLoader:
-    image_dataset: HieroglyphDataset = HieroglyphDataset(image_paths, class_to_idx)
+    transforms = [
+        A.RGBShift(p=1.),
+        A.HueSaturationValue(p=1.),
+        A.ChannelShuffle(p=1.),
+        A.CLAHE(p=1.),
+        A.RandomBrightnessContrast(p=1.),
+        A.RandomGamma(p=1.),
+        A.ImageCompression(p=1.),
+        
+        A.HorizontalFlip(p=1.),
+        A.VerticalFlip(p=1.),
+        A.Compose([A.HorizontalFlip(p=1.), A.VerticalFlip(p=1.)]), # = 180 rotation
+        # A.RandomCrop(p=1.),
+    ] if augment else []
+    
+    image_dataset: HieroglyphDataset = HieroglyphDataset(image_paths, class_to_idx, transforms)
 
     dataloader: DataLoader = DataLoader(
         image_dataset,

@@ -127,6 +127,7 @@ def main():
         image_paths=train_image_paths,
         class_to_idx=class_to_idx,
         batch_size=BATCH_SIZE,
+        augment=True,
         shuffle=True,
         num_workers=0
     )
@@ -135,6 +136,7 @@ def main():
         image_paths=val_image_paths,
         class_to_idx=class_to_idx,
         batch_size=BATCH_SIZE,
+        augment=False,
         shuffle=False,
         num_workers=0
     )
@@ -143,6 +145,7 @@ def main():
         image_paths=test_image_paths,
         class_to_idx=class_to_idx,
         batch_size=BATCH_SIZE,
+        augment=False,
         shuffle=False,
         num_workers=0
     )
