@@ -25,4 +25,9 @@ BATCH_SIZE: int = 32
 
 LEARNING_RATE: float = 1e-3 
 
-EPOCHS = 15
+EPOCHS = 128
+
+AUG_MAX_SHIFT_PERCENT: float = 10.0
+AUG_MAX_ROTATION_DEG: float = 10.0
+AUG_ZOOM_RANGE: tuple[float, float] = (0.95, 1.05)
+BALANCE_CAP_FACTOR: float = 2.0

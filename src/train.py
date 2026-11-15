@@ -70,7 +70,7 @@ def test_loop(dataloader, model, loss_fn) -> tuple[float, float]:
     return average_loss, accuracy
 
 
-def train_epochs(train_loader, val_loader, model, loss_fn, optimizer) -> list[dict[str, int | float]]:
+def train_epochs(train_loader, train_eval_loader, val_loader, model, loss_fn, optimizer) -> list[dict[str, int | float]]:
     history: list[dict[str, int | float]] = []
     
     for epoch in range(EPOCHS):
@@ -84,12 +84,17 @@ def train_epochs(train_loader, val_loader, model, loss_fn, optimizer) -> list[di
         )
 
         val_loss, val_accuracy = test_loop(val_loader, model, loss_fn)
+        
+        clean_train_loss, clean_train_accuracy = test_loop(train_eval_loader, model, loss_fn)
+        print(f"Train (clean, eval mode) loss: {clean_train_loss:.4f}, accuracy: {clean_train_accuracy:.2%}")
 
         history.append(
             {
                 "epoch": epoch + 1,
                 "train_loss": train_loss,
                 "train_accuracy": train_accuracy,
+                "clean_train_loss": clean_train_loss,
+                "clean_train_accuracy": clean_train_accuracy,
                 "val_loss": val_loss,
                 "val_accuracy": val_accuracy,
             }
@@ -131,6 +136,15 @@ def main():
         shuffle=True,
         num_workers=0
     )
+    
+    train_eval_loader = create_dataloader(
+        image_paths=train_image_paths,
+        class_to_idx=class_to_idx,
+        batch_size=BATCH_SIZE,
+        augment=False,
+        shuffle=False,
+        num_workers=0,
+    )
 
     val_loader: DataLoader = create_dataloader(
         image_paths=val_image_paths,
@@ -163,6 +177,7 @@ def main():
 
     history = train_epochs(
         train_loader=train_loader,
+        train_eval_loader=train_eval_loader,
         val_loader=val_loader,
         model=model,
         loss_fn=loss_fn,

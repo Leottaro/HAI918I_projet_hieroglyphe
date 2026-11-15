@@ -61,41 +61,84 @@
   + Début du développement d’un outil de prétraitement des imagettes basé sur la méthode proposée dans l’article@fuentesferrer2025cvv.
 ]
 
-== Comparaison avec et sans augmentations de données
+
+== Augmentations de données du papier
+
+#[
+  + Vise à équilibrer les différentes classes
+    - Classes de plus de 2× la moyenne : sous-échantillonnées
+    - Classes rares : complétées par des images transformées
+  + Augmenter = Translation d'amplitude max 10 px, Rotation entre -10° et 10°, zoom entre 95% et 105%
+  + Symétrie horizontale appliquée à toutes les images d'entraînement
+]
+
+== Avec et sans augmentation : la perte
+
+#[
+  #set text(size: 18pt)
+  #figure(
+    grid(
+      columns: (1fr, 1fr),
+      column-gutter: 24pt,
+      stack(
+        spacing: 8pt,
+        [*Sans augmentation*],
+        image("../common/images/glyphnet_trained_30_epochs_loss.png", width: 100%, height: 260pt, fit: "contain"),
+      ),
+      stack(
+        spacing: 8pt,
+        [*Avec augmentation*],
+        image(
+          "../common/images/glyphnet_trained_128_epochs_loss-augmented.png",
+          width: 100%,
+          height: 260pt,
+          fit: "contain",
+        ),
+      ),
+    ),
+    caption: [Comparaison de la perte sur 30 époques.],
+  ) <fig-perte-entrainement>
+]
+
+== Avec et sans augmentation : l'exactitude
+
+#[
+  #set text(size: 18pt)
+  #figure(
+    grid(
+      columns: (1fr, 1fr),
+      column-gutter: 24pt,
+      stack(
+        spacing: 8pt,
+        [*Sans augmentation*],
+        image("../common/images/glyphnet_trained_30_epochs_accuracy.png", width: 100%, height: 260pt, fit: "contain"),
+      ),
+      stack(
+        spacing: 8pt,
+        [*Avec augmentation*],
+        image(
+          "../common/images/glyphnet_trained_128_epochs_accuracy-augmented.png",
+          width: 100%,
+          height: 260pt,
+          fit: "contain",
+        ),
+      ),
+    ),
+    caption: [Comparaison de l'exactitude sur 30 époques.],
+  ) <fig-exactitude-entrainement>
+]
+
+== Pourquoi si peu d'effet ?
 
 #[
   #set text(size: 18pt)
   #set par(leading: 0.55em, spacing: 1em)
-  #set list(spacing: 12pt)
-  #cols(columns: (1fr, 1fr), gutter: 24pt)[
-    #figure(
-      stack(
-        spacing: 8pt,
-        image("../common/images/glyphnet_trained_30_epochs_loss.png", width: 100%, height: 165pt, fit: "contain"),
-        // image(
-        //   "../common/images/glyphnet_trained_30_epochs_loss-augmented1.png",
-        //   width: 100%,
-        //   height: 165pt,
-        //   fit: "contain",
-        // ),
-      ),
-      caption: [Comparaison de la perte sur 30 époques.],
-    ) <fig-perte-entrainement>
-  ][
-    #figure(
-      stack(
-        spacing: 8pt,
-        image("../common/images/glyphnet_trained_30_epochs_accuracy.png", width: 100%, height: 165pt, fit: "contain"),
-        // image(
-        //   "../common/images/glyphnet_trained_30_epochs_accuracy-augmented1.png",
-        //   width: 100%,
-        //   height: 165pt,
-        //   fit: "contain",
-        // ),
-      ),
-      caption: [Comparaison de l'exactitude sur 30 époques.],
-    ) <fig-exactitude-entrainement>
-  ]
+
+  L'augmentation n'a pas beaucoup d'effet sur la perte et l'exactitude, pour trois raisons :
+
+  + *Données homogènes* : toutes les images (pyramide d'Unas) ont le même support et les mêmes conditions de prise de vue, et la validation suit la même distribution. Décalages, rotations et zooms apportent donc peu de variabilité utile.
+  + *Peu de surapprentissage au départ* : Glyphnet n'a qu'environ 500 000 paramètres et il est déjà régularisé (BatchNorm, dropout).
+  + *Métrique globale* : l'exactitude est dominée par les classes fréquentes, alors que le rééquilibrage aide surtout les classes rares. Son effet se verrait plutôt sur le rappel ou le F1 par classe.
 ]
 
 == Problèmes avec les données fournies
@@ -114,20 +157,20 @@
   #set par(leading: 0.5em)
   #set enum(spacing: 24pt)
   #v(10pt)
-*Objectif*
+  *Objectif*
 
-Développer une interface graphique basée sur Qt, permettant de:
-+ effectuer un découpage automatique préliminaire à l’aide d’une méthode de segmentation automatique. 
-+ Les résultats seront ensuite vérifiés et ajustés manuellement, avant de procéder à l’annotation manuelle des données.
+  Développer une interface graphique basée sur Qt, permettant de:
+  + effectuer un découpage automatique préliminaire à l’aide d’une méthode de segmentation automatique.
+  + Les résultats seront ensuite vérifiés et ajustés manuellement, avant de procéder à l’annotation manuelle des données.
 
-#v(0.5cm)
-*Auto segementation*
-#text(size: 16pt,)[(Voir un exemple dans @exemple-auto-segmentation)]
-+ Binarisation par la méthode d’Otsu puis nettoyage de l’image binaire.
-+ Recherche des composantes connexes.
-+ Échantillonnage aléatoire d’un nombre fixe de points dans chaque composante.
-+ Utiliser ces points pour effectuer une segmentation automatique à l’aide du modèle SAM@sam
-+ Obtenir la boîte englobante de l’objet cible, puis l’ajuster à des dimensions fixes.
+  #v(0.5cm)
+  *Auto segementation*
+  #text(size: 16pt)[(Voir un exemple dans @exemple-auto-segmentation)]
+  + Binarisation par la méthode d’Otsu puis nettoyage de l’image binaire.
+  + Recherche des composantes connexes.
+  + Échantillonnage aléatoire d’un nombre fixe de points dans chaque composante.
+  + Utiliser ces points pour effectuer une segmentation automatique à l’aide du modèle SAM@sam
+  + Obtenir la boîte englobante de l’objet cible, puis l’ajuster à des dimensions fixes.
 
 
 
@@ -138,7 +181,7 @@ Développer une interface graphique basée sur Qt, permettant de:
 
   #v(10pt)
 
-  #show figure.caption: set text(size: 15pt, fill: rgb("#555555"),)
+  #show figure.caption: set text(size: 15pt, fill: rgb("#555555"))
 
   #cols(align: horizon)[
     #set text(size: 24pt)

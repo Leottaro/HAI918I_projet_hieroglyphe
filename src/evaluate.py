@@ -44,10 +44,14 @@ def plot_training_history(history_path: Path, output_dir: Path):
         raise ValueError("training history is empty.")
 
     epochs: list[int] = []
+    
     train_losses: list[float] = []
     val_losses: list[float] = []
+    clean_train_losses: list[float] = []
+    
     train_accuracies: list[float] = []
     val_accuracies: list[float] = []
+    clean_train_accuracies: list[float] = []
 
     # collecte datas
     for item in history:
@@ -55,9 +59,11 @@ def plot_training_history(history_path: Path, output_dir: Path):
 
         train_losses.append(item["train_loss"])
         val_losses.append(item["val_loss"])
+        clean_train_losses.append(item["clean_train_loss"])
 
         train_accuracies.append(item["train_accuracy"] * 100)
         val_accuracies.append(item["val_accuracy"] * 100)
+        clean_train_accuracies.append(item["clean_train_accuracy"] * 100)
 
     # draw figures
     figure, (loss_ax, accuracy_ax) = plt.subplots(
@@ -69,6 +75,7 @@ def plot_training_history(history_path: Path, output_dir: Path):
     # loss figure
     loss_ax.plot(epochs, train_losses, label="Train loss")
     loss_ax.plot(epochs, val_losses, label="Validation loss")
+    loss_ax.plot(epochs, clean_train_losses, label="Clean Train loss")
 
     loss_ax.set_title("Loss")
     loss_ax.set_xlabel("Epoch")
@@ -79,6 +86,7 @@ def plot_training_history(history_path: Path, output_dir: Path):
     # accuracy figure
     accuracy_ax.plot(epochs, train_accuracies, label="Train accuracy")
     accuracy_ax.plot(epochs, val_accuracies, label="Validation accuracy")
+    accuracy_ax.plot(epochs, clean_train_accuracies, label="Clean Train accuracy")
 
     accuracy_ax.set_title("Accuracy")
     accuracy_ax.set_xlabel("Epoch")
@@ -193,9 +201,9 @@ def main():
     # reload model and history data
     output_dir: Path = PROJECT_ROOT / "outputs"
 
-    history_path: Path = output_dir / "training_history_epochs_30.json"
+    history_path: Path = output_dir / f"training_history_epochs_{EPOCHS}.json"
 
-    model_path: Path = output_dir / "glyphnet_epochs_15.pt"
+    model_path: Path = output_dir / f"glyphnet_epochs_{EPOCHS}.pt"
 
     matrix_path: Path = (output_dir / f"{model_path.stem}_confusion_matrix.png")
 
