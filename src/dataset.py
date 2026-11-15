@@ -141,7 +141,6 @@ def create_dataloader(image_paths: list[Path],
 ) -> DataLoader:
     transforms = [
         A.RGBShift(p=1.),
-        A.HueSaturationValue(p=1.),
         A.ChannelShuffle(p=1.),
         A.CLAHE(p=1.),
         A.RandomBrightnessContrast(p=1.),
