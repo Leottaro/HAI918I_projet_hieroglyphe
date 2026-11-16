@@ -32,7 +32,7 @@ def load_model(model_path: Path) -> tuple[Glyphnet, dict[str, int]]:
     return model, class_to_idx
 
 
-def plot_training_history(history_path: Path, output_dir: Path):
+def plot_training_history(history_path: Path, output_dir: Path, model_name: str):
     # read history
     record: dict[str, any] = json.loads(history_path.read_text(encoding="utf-8"))
 
@@ -75,7 +75,7 @@ def plot_training_history(history_path: Path, output_dir: Path):
     loss_ax.plot(epochs, val_losses, label="Validation loss")
     loss_ax.plot(epochs, clean_train_losses, label="Clean Train loss")
 
-    loss_ax.set_title("Loss")
+    loss_ax.set_title(f"{model_name} Loss")
     loss_ax.set_xlabel("Epoch")
     loss_ax.set_ylabel("Loss")
     loss_ax.legend()
@@ -86,7 +86,7 @@ def plot_training_history(history_path: Path, output_dir: Path):
     accuracy_ax.plot(epochs, val_accuracies, label="Validation accuracy")
     accuracy_ax.plot(epochs, clean_train_accuracies, label="Clean Train accuracy")
 
-    accuracy_ax.set_title("Accuracy")
+    accuracy_ax.set_title(f"{model_name} Accuracy")
     accuracy_ax.set_xlabel("Epoch")
     accuracy_ax.set_ylabel("Accuracy (%)")
     accuracy_ax.set_ylim(0, 100)
@@ -127,7 +127,7 @@ def collect_predictions(model: Glyphnet, dataloader: DataLoader) -> tuple[list[i
     return y_true, y_pred
                     
 
-def report_results(y_true: list[int], y_pred: list[int], class_to_idx: dict[str, int], matrix_path: Path):
+def report_results(y_true: list[int], y_pred: list[int], class_to_idx: dict[str, int], matrix_path: Path, model_name: str):
     # get label index in order
     label_indices: list[int] = sorted(class_to_idx.values())
 
@@ -177,7 +177,7 @@ def report_results(y_true: list[int], y_pred: list[int], class_to_idx: dict[str,
         include_values=False,
     )
 
-    ax.set_title("Normalized confusion matrix")
+    ax.set_title(f"Normalized confusion matrix for {model_name}")
     ax.set_xlabel("Predicted class")
     ax.set_ylabel("True class")
     ax.tick_params(axis="both", labelsize=8)
@@ -223,12 +223,12 @@ def main():
             continue
         
         history_path: Path = output_dir / "training_history.json"
-        plot_training_history(history_path, output_dir)
+        plot_training_history(history_path, output_dir, model_name)
         
         # draw training curves (loss and accuracy)
         matrix_path: Path = output_dir / "confusion_matrix.png"
         y_true, y_pred = collect_predictions(model, test_loader)
-        report_results(y_true, y_pred, trained_class_to_idx, matrix_path)
+        report_results(y_true, y_pred, trained_class_to_idx, matrix_path, model_name)
 
 
 if __name__ == "__main__":
