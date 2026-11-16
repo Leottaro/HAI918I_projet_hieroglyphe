@@ -8,6 +8,7 @@ from PySide6.QtCore import (
     QPoint,
     QPointF,
     QRectF,
+    Signal,
 )
 
 from PySide6.QtGui import (
@@ -134,7 +135,7 @@ class ImageCanvas(QGraphicsView):
         super().__init__(parent)
 
         self.prompt_items: list[PromptPoint] = []   # we save prompts points list for SAM
-        self.box_item: SelectionBox | None = None   # current box item
+        self.box_item: SelectionBox | None = None   # current box item selected
 
         self.draft_box: SelectionBox | None = None  # temproray box when we draw selection box
         self.box_start: QPointF | None = None   # when draw selection box, we record box start position
@@ -540,5 +541,23 @@ class ImageCanvas(QGraphicsView):
         return None
 
 
+    # return box_item boundry
+    def get_corp_box(self) -> tuple[int, int, int, int] | None:
+        if self.box_item is None:
+            return None
+        # get box item boundary
+        rect: QRectF = self.box_item.mapRectToScene(
+            self.box_item.rect()
+        ).intersected(self.image_item.boundingRect())
 
+        if rect.isEmpty():
+            return None
+
+        # return boundary [left, top, right, bottom]
+        return (
+            floor(rect.left()),
+            floor(rect.top()),
+            ceil(rect.right()),
+            ceil(rect.bottom()),
+        )
 

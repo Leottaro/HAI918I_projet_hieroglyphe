@@ -1,7 +1,19 @@
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PIL import Image
+from PIL.ImageQt import ImageQt, fromqpixmap
+
+from PySide6.QtCore import (
+    Qt,
+    QRectF
+)
+
+
+from PySide6.QtGui import (
+    QPixmap,
+    QImage,
+)
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -23,12 +35,16 @@ from PySide6.QtWidgets import (
 )
 
 from image_canvas import ImageCanvas
+from pretreatment import *
 
 
 class DatasetProcessWindow(QMainWindow):
 
     def __init__(self) -> None:
         super().__init__()
+
+        self.processed_image: Image.Image | None = None
+        self.preview_pixmap: QPixmap | None = None
 
         self.setWindowTitle("Dataset process")
         self.resize(1200, 820)
@@ -113,6 +129,8 @@ class DatasetProcessWindow(QMainWindow):
         self.preview_label.setMinimumSize(160, 160)
         self.preview_label.setMaximumHeight(220)
         right_layout.addWidget(self.preview_label)
+        self.update_preview_button: QPushButton = QPushButton("Update preview", right_widget,)
+        right_layout.addWidget(self.update_preview_button)
 
         # label and filename setting
         self.label_edit: QLineEdit = QLineEdit(right_widget)
@@ -152,6 +170,7 @@ class DatasetProcessWindow(QMainWindow):
         delete_button.clicked.connect(self.canvas.delete_selected_items)
         clear_points_button.clicked.connect(self.canvas.clear_prompt_points)
         clear_box_button.clicked.connect(self.canvas.clear_box)
+        self.update_preview_button.clicked.connect(self.update_preview)
 
         self.statusBar().showMessage("please select a image")
 
@@ -184,6 +203,57 @@ class DatasetProcessWindow(QMainWindow):
         self.label_edit.clear()
 
         self.statusBar().showMessage(f"Opened image: {image_path.name}")
+
+    # update preview image
+    def update_preview(self) -> None:
+        crop_box: tuple[int, int, int, int] | None = self.canvas.get_corp_box()
+
+        if crop_box is None:
+            self.processed_image = None
+            self.preview_pixmap = None
+            self.show_preview()
+            return
+
+        original: Image.Image = fromqpixmap(self.canvas.image_item.pixmap()).convert("RGB")
+        output_size: tuple[int, int] = (
+            self.output_width.value(),
+            self.output_height.value(),
+        )
+
+        self.processed_image = self.prepare_processed_image(original, crop_box, output_size)
+        qt_image: QImage = ImageQt(self.processed_image)
+        self.preview_pixmap = QPixmap.fromImage(qt_image)
+
+        self.show_preview()
+
+
+    def prepare_processed_image(
+        self,
+        image: Image.Image,
+        crop_box: tuple[int, int, int, int],
+        output_size: tuple[int, int],
+    ) -> Image.Image:
+        left, top, right, bottom = crop_box
+        crop: Image.Image = image.convert("RGB").crop(crop_box)
+        return crop
+
+    # show preview label content
+    def show_preview(self) -> None:
+        if self.preview_pixmap is None:
+            self.preview_label.clear()
+            self.preview_label.setText(
+                "Select a character to preview"
+            )
+            return
+
+        self.preview_label.setPixmap(
+            self.preview_pixmap.scaled(
+                self.preview_label.contentsRect().size(),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+        )
+
         
 
 
