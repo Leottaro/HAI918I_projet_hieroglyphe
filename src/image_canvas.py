@@ -2,6 +2,8 @@ import numpy as np
 
 from pathlib import Path
 from math import ceil, floor
+from PIL import Image
+from PIL.ImageQt import ImageQt
 
 from PySide6.QtCore import (
     Qt,
@@ -155,6 +157,11 @@ class ImageCanvas(QGraphicsView):
 
         # set image item
         self.image_item: QGraphicsPixmapItem = self.graphics_scene.addPixmap(QPixmap())
+
+        self.mask_item: QGraphicsPixmapItem = QGraphicsPixmapItem(self.image_item)
+        self.mask_item.setZValue(1)
+        self.mask_item.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
+
 
         # set transformation mode 
         self.image_item.setTransformationMode(Qt.TransformationMode.SmoothTransformation)
@@ -402,6 +409,7 @@ class ImageCanvas(QGraphicsView):
                 self.box_item.setZValue(5)
                 self.graphics_scene.clearSelection()
                 self.box_item.setSelected(True)
+                self.clear_prompts_outside_box()    # clean all prompt points outside box
 
             self.clear_draft_box()
             event.accept()
@@ -445,6 +453,8 @@ class ImageCanvas(QGraphicsView):
 
             self.graphics_scene.removeItem(self.box_item)
             self.box_item = None
+
+        self.clear_mask()
 
     def delete_selected_items(self) -> None:
         if self.box_item is not None and self.box_item.isSelected():
@@ -560,4 +570,60 @@ class ImageCanvas(QGraphicsView):
             ceil(rect.right()),
             ceil(rect.bottom()),
         )
+
+
+    def clear_prompts_outside_box(self) -> None:
+        if self.box_item is None:
+            return
+        scene_rect: QRectF = self.box_item.mapRectToScene(
+            self.box_item.rect()
+        )
+        for point in self.prompt_items.copy():
+            position: QPointF = point.scenePos()
+            if not scene_rect.contains(position):
+                self.graphics_scene.removeItem(point)
+                self.prompt_items.remove(point)
+
+    def clear_mask(self) -> None:
+        self.mask_item.setPixmap(QPixmap())
+
+    def show_segmentation(
+        self,
+        mask: np.ndarray,
+        box: tuple[int, int, int, int] | None,
+    ) -> None:
+        pixmap: QPixmap = self.image_item.pixmap()
+        if mask.shape != (pixmap.height(), pixmap.width()):
+            raise ValueError("Mask size must match the original image")
+
+        self.clear_draft_box()
+        self.clear_box()
+
+        if box is None:
+            self.mask_item.setPixmap(QPixmap())
+            return
+
+        height, width = mask.shape
+
+        rgba: np.ndarray = np.zeros(
+            (height, width, 4),
+            dtype=np.uint8,
+        )
+
+        # draw mask area
+        rgba[mask] = (0, 120, 255, 90)
+        overlay: Image.Image = Image.fromarray(rgba)
+        self.mask_item.setPixmap(
+            QPixmap.fromImage(ImageQt(overlay))
+        )
+
+        # update selection box
+        left, top, right, bottom = box
+        self.box_item = SelectionBox(self.image_item.boundingRect())
+
+        self.box_item.setRect(QRectF(left,top,right - left,bottom - top,))
+
+        self.graphics_scene.addItem(self.box_item)
+        self.graphics_scene.clearSelection()
+        self.box_item.setSelected(True)
 
