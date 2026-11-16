@@ -1,0 +1,197 @@
+Deno,Type_monu,Mains,Forme_main,Doigts,Doigts_indiv,Espacement doigts,Nombre doigts,Symétrie,Pouces_distingues,Angle des coudes,Type de jointure,Technique,Pavois,Couleur,Bracelets,Combinaison
+CK_140 (1),Statuette,oui,boule,non,non,non,non,oui,non,droit,triangle,creux,non,non,non,non
+CK_140 (2),Statuette,oui,boule,non,non,non,non,oui,non,droit,triangle,creux,non,non,non,non
+Horemheb_mur_nord_1,paroi,oui,pince,non,non,non,non,oui,oui,droit,trait,creux,oui,non,non,non
+Khonsou_portique_col19_93 (1),paroi,oui,réaliste,oui,oui,non,NA,oui,oui,droit,muscle,creux,oui,rouge,non,non
+Khonsou_portique_col19_93 (2),paroi,oui,réaliste,oui,oui,non,NA,oui,oui,droit,muscle,creux,non,rouge,non,non
+Khonsou_portique_col19_93 (3),paroi,oui,réaliste,oui,oui,non,NA,oui,oui,droit,muscle,creux,non,rouge,non,non
+Khonsou_portique_col20_96,paroi,oui,réaliste,oui,oui,non,NA,oui,oui,droit,muscle,creux,oui,non,non,non
+Khonsou_portique_col21_98,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,oui,non,non,non
+Khonsou_portique_mur_sud_4,paroi,oui,réaliste,oui,non,non,3,oui,oui,droit,muscle,creux,oui,non,non,non
+KIU_253 (1),paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,relief,non,non,non,non
+KIU_253 (2),paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,relief,non,non,non,non
+KIU_253 (3),paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,relief,non,non,non,non
+KIU_260 (1),paroi,oui,réaliste,non,non,non,non,oui,oui,droit,,relief,non,rouge,non,non
+KIU_260 (2),paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,relief,non,rouge,non,non
+KIU_260 (3),paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,relief,non,rouge,non,non
+KIU_556,paroi,oui,pince,non,non,non,non,oui,oui,droit,muscle,creux,oui,non,non,non
+KIU_614,,,,,,,,,,,,,,,,non
+KIU_623 (1),paroi,oui,boule,non,non,non,non,oui,non,droit,plate,creux,non,NA,non,non
+KIU_623 (2),paroi,oui,boule,non,non,non,non,oui,non,droit,plate,creux,non,NA,non,non
+KIU_623 (3),paroi,oui,boule,non,non,non,non,oui,non,droit,plate,creux,non,NA,non,non
+KIU_627,paroi,oui,boule,non,non,non,non,oui,non,droit,plate,creux,non,NA,non,non
+KIU_627_2,paroi,oui,boule,non,non,non,non,oui,non,droit,plate,creux,non,NA,non,non
+KIU_632,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,Sw
+KIU_633,paroi,non,non,non,non,non,non,oui,non,droit,muscle,creux,non,NA,non,non
+KIU_634,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_637 (1),paroi,oui,boule,non,non,non,non,oui,non,droit,plate,creux,non,NA,non,non
+KIU_637 (2),paroi,oui,boule,non,non,non,non,oui,non,droit,plate,creux,non,NA,non,non
+KIU_637 (3),paroi,NA,NA,NA,NA,NA,NA,NA,NA,droit,plate,creux,non,NA,NA,non
+KIU_653,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_775,paroi,oui,réaliste,oui,oui,non,4,NA,oui,droit,muscle,relief,oui,NA,non,non
+KIU_795,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,relief,oui,NA,non,Sw
+KIU_857,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,relief,oui,NA,non,non
+KIU_883,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,NA,relief,non,NA,non,non
+KIU_883_2,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,muscle,relief,non,NA,non,non
+KIU_887,,,,,,,,,,,,,,,,
+KIU_887_2,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,relief,non,NA,non,non
+KIU_887_3,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,muscle,relief,non,NA,non,non
+KIU_944,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,oui,NA,non,non
+KIU_1207 (1),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_1207 (2),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_1207 (3),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_1208,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,oui,NA,non,non
+KIU_1208_2 (1),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_1208_2 (2),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_1208_2 (3),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_1241 (1),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_1241 (2),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_1241 (3),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_1256,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,oui,NA,non,non
+KIU_1265 (1),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_1265 (2),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_1265 (3),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_1267 (1),paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_1267 (2),paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_1267 (3),paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_1280,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,creux,oui,NA,non,non
+KIU_1285,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,NA,creux,oui,NA,non,non
+KIU_1289 (1),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_1289 (2),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_1289 (3),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,NA,non,non
+KIU_1291,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,creux,oui,NA,non,non
+KIU_1579 (1),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non
+KIU_1579 (2),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non
+KIU_1579 (3),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non
+KIU_1613,paroi,non,non,non,non,non,non,oui,non,droit,plate,creux,non,non,non,non
+KIU_1754,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non
+KIU_1831,,,,,,,,,,,,,,,,
+KIU_1997,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,relief,non,non,non,non
+KIU_1997_2,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,relief,non,non,non,non
+KIU_2071,paroi,non,non,non,non,non,non,oui,non,droit,séparation,creux,oui,NA,non,Sw
+KIU_2072,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,oui,NA,non,Sw
+KIU_2202,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non
+KIU_2276,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non
+KIU_2293 (1),paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,relief,non,non,non,non
+KIU_2293 (2),paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,relief,non,non,non,non
+KIU_2293 (3),paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,relief,non,non,non,non
+KIU_2296,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,muscle,relief,non,non,non,non
+KIU_2298 (1),paroi,oui,réaliste,oui,non,non,5,oui,oui,droit,plate,relief,non,non,non,non
+KIU_2298 (2),paroi,oui,réaliste,oui,non,non,5,oui,oui,droit,plate,relief,non,non,non,non
+KIU_2298 (3),paroi,oui,réaliste,oui,non,non,5,oui,oui,droit,plate,relief,non,non,non,non
+KIU_2301 (1),paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,relief,non,non,non,non
+KIU_2301 (2),paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,relief,non,non,non,non
+KIU_2301 (3),paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,relief,non,non,non,non
+KIU_2338,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,muscle+,relief,oui,rouge,non,non
+KIU_2486,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,relief,oui,non,non,Sw
+KIU_2651 (1),paroi,oui,pince,non,non,non,non,oui,oui,droit,muscle+,creux,non,non,non,non
+KIU_2651 (2),paroi,oui,pince,non,non,non,non,oui,oui,droit,muscle+,creux,non,non,non,non
+KIU_2651 (3),paroi,oui,pince,non,non,non,non,oui,oui,droit,muscle+,creux,non,non,non,non
+KIU_2712,,,,,,,,,,,,,,,,
+KIU_2829,paroi,oui,pince,non,non,non,non,oui,oui,droit,muscle,relief,oui,non,non,non
+KIU_2855,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,muscle+,relief,oui,non,non,non
+KIU_2942,,,,,,,,,,,,,,,,
+KIU_2967,,,,,,,,,,,,,,,,
+KIU_2995 (1),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,relief,non,NA,non,non
+KIU_2995 (2),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,relief,non,NA,non,non
+KIU_2995 (3),paroi,oui,pince,non,non,non,non,NA,oui,NA,NA,relief,non,NA,non,non
+KIU_3053 (1),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non
+KIU_3053 (2),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non
+KIU_3053 (3),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non
+KIU_3227,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,creux,oui,non,non,non
+KIU_3306,,,,,,,,,,,,,,,,
+KIU_3370,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,oui,non,non,non
+KIU_3553,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,triangle,creux,non,non,non,non
+KIU_3568,,,,,,,,,,,,,,,,
+KIU_3569,paroi,oui,pince,oui,non,non,non,oui,oui,droit,plate,relief,oui,non,non,Sw
+KIU_3625,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,triangle,creux,non,non,non,non
+KIU_3625_2,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,triangle,creux,non,non,non,non
+KIU_3670,paroi,non,non,non,non,non,non,oui,non,droit,plate,creux,non,non,non,non
+KIU_3670_2,paroi,non,non,non,non,non,non,oui,non,droit,plate,creux,non,non,non,non
+KIU_3670_3 (1),paroi,oui,pince,non,non,non,non,oui,oui,obtus,triangle,creux,non,non,non,non
+KIU_3670_3 (2),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non
+KIU_3783,paroi,oui,pince,non,non,non,non,oui,oui,aïgus,triangle,creux,non,non,non,non
+KIU_3798,,,,,,,,,,,,,,,,
+KIU_3867,,,,,,,,,,,,,,,,
+KIU_3872,,,,,,,,,,,,,,,,
+KIU_3878,paroi,oui,coupe,non,non,non,non,oui,non,droit,triangle,creux,non,non,non,non
+KIU_3879,paroi,oui,coupe,non,non,non,non,oui,non,droit,triangle,creux,non,non,non,non
+KIU_3883,paroi,non,non,non,non,non,non,oui,non,droit,triangle,creux,non,non,non,non
+KIU_3883_2,paroi,oui,coupe,non,non,non,non,oui,non,aïgus,triangle,creux,non,non,non,non
+KIU_4285,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non
+KIU_4285_2,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non
+KIU_4288,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non
+KIU_4289,paroi,oui,coupe,non,non,non,non,oui,non,droit,plate,creux,non,non,non,non
+KIU_4291,paroi,oui,coupe,non,non,non,non,oui,non,droit,plate,creux,non,non,non,non
+KIU_4291_2,paroi,oui,coupe,non,non,non,non,oui,non,droit,plate,creux,non,non,non,non
+KIU_4292,paroi,oui,coupe,non,non,non,non,oui,non,droit,plate,creux,non,non,non,non
+KIU_4810,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,relief,non,non,non,non
+KIU_4838,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,relief,non,non,non,non
+KIU_4850,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,relief,non,non,non,non
+KIU_4856,paroi,non,non,non,non,non,non,oui,non,droit,plate,relief,non,non,non,non
+KIU_5087,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,oui,non,non,non
+KIU_5087_2 (1),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non
+KIU_5087_2 (2),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non
+KIU_5087_2 (3),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non
+KIU_5240,paroi,oui,boule,non,non,non,non,oui,non,droit,plate,relief,non,non,non,non
+KIU_5253,paroi,oui,coupe,non,non,non,non,oui,non,droit,plate,relief,non,rouge,non,non
+KIU_5649,paroi,oui,réaliste,oui,non,non,4,oui,oui,droit,muscle,relief,non,non,oui,non
+KIU_6904,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,muscle,relief,oui,noir,non,non
+KIU_6928,paroi,oui,pince,non,non,non,non,NA,oui,droit,muscle,creux,oui,non,non,non
+KIU_6956,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,relief,oui,non,non,non
+KIU_6963,paroi,oui,pince,non,non,non,non,oui,oui,NA,NA,creux,oui,non,non,non
+KIU_6999,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,relief,oui,non,non,non
+KIU_7600,paroi,oui,boule,non,non,non,non,oui,non,droit,plate,creux,oui,NA,non,non
+KIU_7600_2 ,paroi,oui,boule,non,non,non,non,oui,non,droit,plate,creux,oui,NA,non,Sw
+Taharqa_1,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,oui,non,non,Sw
+TT_40_1,paroi,oui,pince,non,non,non,non,oui,non,droit,trait,peint,non,noir,non,non
+TT_40_2,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,peint,non,noir,non,non
+TT_40_3,paroi,NA,NA,NA,NA,NA,NA,NA,NA,droit,trait,peint,non,noir,non,non
+TT_40_4,paroi,oui,pince,non,non,non,non,oui,oui,droit,triangle,peint,non,noir,non,non
+TT_40_5,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,peint,non,noir,non,non
+TT_40_6,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,muscle_traits,peint,non,noir,non,non
+TT_40_7,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,muscle_traits,peint,non,noir,non,non
+TT_40_8,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,NA,peint,non,rouge,non,NA
+TT_40_9,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,muscle_traits,peint,non,rouge,non,non
+TT_55_1,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,muscle,relief,non,non,non,non
+TT_55_2,paroi,oui,réaliste,oui,oui,non,5,oui,oui,droit,muscle,relief,oui,non,non,non
+TT_55_3,paroi,oui,réaliste,oui,oui,non,5,oui,oui,droit,muscle,relief,non,non,non,non
+TT_55_4,paroi,oui,réaliste,oui,oui,non,5,NA,oui,droit,muscle,relief,non,non,non,non
+TT_55_5,paroi,oui,réaliste,oui,oui,non,5,NA,oui,droit,muscle,relief,non,non,non,non
+TT_55_6,paroi,oui,réaliste,oui,non,non,5,oui,oui,droit,muscle,relief,non,non,non,non
+TT_55_7,paroi,oui,réaliste,oui,non,non,5,oui,oui,droit,muscle,relief,non,non,non,non
+TT_55_8,paroi,oui,réaliste,oui,non,non,5,oui,oui,droit,muscle,relief,non,non,non,non
+TT_55_9,paroi,oui,réaliste,oui,oui,non,5,oui,oui,droit,muscle,relief,non,non,non,non
+TT_55_10,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non
+TT_55_11,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,muscle,relief,non,non,non,non
+TT_55_12,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,muscle,relief,non,non,non,non
+TT_55_13,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,muscle,relief,oui,non,non,non
+TT_55_14,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,muscle,relief,oui,non,non,non
+TT_55_15,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,muscle,relief,oui,non,non,non
+TT_55_16,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,peint,non,noir,non,non
+TT_55_17,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,muscle,relief,non,non,non,non
+TT_96_1,paroi,oui,boule,non,non,non,non,oui,non,droit,plate,peint,non,noir,non,non
+TT_96_2,paroi,oui,boule,non,non,non,non,oui,non,droit,plate,peint,non,noir,non,non
+TT_96_3,paroi,oui,boule,non,non,non,non,oui,non,droit,muscle_traits,peint,non,noir,non,non
+TT_96_4,paroi,oui,cercle,non,non,non,non,oui,non,droit,muscle_traits,peint,non,noir,non,non
+TT_96_5,paroi,oui,boule,non,non,non,non,oui,non,droit,demi_cercle,peint,non,noir,non,non
+TT_96_6,paroi,oui,boule,non,non,non,non,oui,non,droit,muscle_traits,peint,oui,noir,non,non
+TT_96_7,paroi,oui,boule,non,non,non,non,oui,non,droit,plate,peint,non,noir,non,non
+TT_96_8,paroi,oui,boule,non,non,non,non,oui,non,droit,plate,peint,non,noir,non,non
+TT_96_9,paroi,oui,boule,non,non,non,non,oui,non,droit,plate,peint,non,noir,non,non
+TT_96_10,paroi,oui,boule,non,non,non,non,oui,non,droit,plate,peint,non,noir,non,non
+TT_96_11,paroi,oui,boule,non,non,non,non,oui,non,droit,trait,peint,non,noir,non,non
+TT_96_12,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,peint,non,noir,non,non
+TT_96_13,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,plate,peint,non,noir,non,non
+TT_96_14,paroi,oui,boule,non,non,non,non,oui,non,droit,plate,peint,non,noir,non,non
+TT_100_1,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,muscle,peint,non,noir,non,non
+TT_100_2,paroi,oui,cercle,non,non,non,non,oui,non,droit,plate,peint,non,noir,non,non
+TT_100_3,paroi,oui,cercle,non,non,non,non,oui,non,droit,plate,peint,oui,noir,non,non
+TT_277_1,paroi,oui,boule,non,non,non,non,oui,non,droit,trait,peint,non,noir,non,non
+TT_277_2,paroi,oui,boule,non,non,non,non,oui,non,droit,trait,peint,non,rouge,non,non
+TT_277_3,paroi,oui,boule,non,non,non,non,oui,non,droit,trait,peint,non,rouge,non,non
+TT_277_4,paroi,non,non,non,non,non,non,oui,non,droit,trait,peint,non,rouge,non,non
+TT_277_5,paroi,oui,boule,non,non,non,non,oui,non,droit,plate,peint,non,rouge,non,non
+TT_277_6,paroi,non,non,non,non,non,non,oui,non,droit,trait,peint,non,rouge,non,non
+TT_277_7,paroi,oui,boule,non,non,non,non,non,non,droit,demi_cercle,peint,non,rouge,non,non
+TT_278_1,paroi,oui,cercle,non,non,non,non,oui,non,droit,demi_cercle,peint,non,noir,non,non

@@ -9,7 +9,6 @@ from typing import Any
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
 
 from config import *
-from inspect_data import *
 from dataset import *
 
 from glyphnet import *
@@ -34,7 +33,6 @@ def load_model(model_path: Path) -> tuple[Glyphnet, dict[str, int]]:
 
 
 def plot_training_history(history_path: Path, output_dir: Path):
-
     # read history
     record: dict[str, any] = json.loads(history_path.read_text(encoding="utf-8"))
 
@@ -129,8 +127,7 @@ def collect_predictions(model: Glyphnet, dataloader: DataLoader) -> tuple[list[i
     return y_true, y_pred
                     
 
-def report_results( y_true: list[int], y_pred: list[int], class_to_idx: dict[str, int], matrix_path: Path):
-
+def report_results(y_true: list[int], y_pred: list[int], class_to_idx: dict[str, int], matrix_path: Path):
     # get label index in order
     label_indices: list[int] = sorted(class_to_idx.values())
 
@@ -197,51 +194,41 @@ def report_results( y_true: list[int], y_pred: list[int], class_to_idx: dict[str
 
 def main():
     torch.manual_seed(SEED)
-
-    # reload model and history data
-    output_dir: Path = PROJECT_ROOT / "outputs"
-
-    history_path: Path = output_dir / f"training_history_epochs_{EPOCHS}.json"
-
-    model_path: Path = output_dir / f"glyphnet_epochs_{EPOCHS}.pt"
-
-    matrix_path: Path = (output_dir / f"{model_path.stem}_confusion_matrix.png")
-
-    model: Glyphnet
-    trained_class_to_idx: dict[str, int]
-
-    model, trained_class_to_idx = load_model(model_path)
-
-    # get image paths
-    image_paths: list[Path] = find_images(DATA_DIR)
-
-    selected_classes: list[str] = list(trained_class_to_idx.keys())
-
-    selected_image_paths: list[Path] = filter_image_paths(image_paths, selected_classes)
-
-    # restore image split during training
-    train_image_paths, val_image_paths, test_image_paths = split_dataset(
-        selected_image_paths,
-        SEED,
-    )
-
-    test_loader: DataLoader = create_dataloader(
-        image_paths=test_image_paths,
-        class_to_idx=trained_class_to_idx,
-        batch_size=BATCH_SIZE,
-        augment=False,
-        shuffle=False,
-        num_workers=0
-    )
-
-    # draw training curves (loss and accuracy)
-    plot_training_history(history_path, output_dir)
-
-    # get predicted labels and real labels by trained model in test dataset
-    y_true, y_pred = collect_predictions(model, test_loader)
-
-    # get report
-    report_results(y_true, y_pred, trained_class_to_idx, matrix_path)    
+    
+    df: pd.DataFrame = pd.read_csv(DATA_DIR / "Tableau_imagette_MB.csv")
+    df = df[~df["Deno"].str.match(R"^.* \([0-9]+\)$")] # filter to keep single sign images
+    
+    models: list[str] = df.columns[1:].array
+    for model_name in models:       
+        df2 = df[df[model_name].notna()]
+    
+        image_paths: list[Path] = [DATA_DIR / (deno.strip() +".png") for deno in df2["Deno"].array]
+        image_size = get_min_size(image_paths)
+    
+        labels: list[str] = df2[model_name].array
+        
+        try:
+            class_to_idx, train_loader, train_eval_loader, val_loader, test_loader = read_dataset(image_paths, labels, image_size)
+        except:
+            continue
+        
+        output_dir: Path = PROJECT_ROOT / "outputs" / model_name / str(EPOCHS)
+        model_path = output_dir / "model.pt"
+        
+        model: Glyphnet
+        trained_class_to_idx: dict[str, int]
+        try:
+            model, trained_class_to_idx = load_model(model_path)
+        except:
+            continue
+        
+        history_path: Path = output_dir / "training_history.json"
+        plot_training_history(history_path, output_dir)
+        
+        # draw training curves (loss and accuracy)
+        matrix_path: Path = output_dir / "confusion_matrix.png"
+        y_true, y_pred = collect_predictions(model, test_loader)
+        report_results(y_true, y_pred, trained_class_to_idx, matrix_path)
 
 
 if __name__ == "__main__":

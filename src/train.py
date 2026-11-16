@@ -1,4 +1,5 @@
 import json
+import pandas as pd
 
 import torch
 from torch import nn, Tensor
@@ -8,11 +9,9 @@ from collections import Counter
 from pathlib import Path
 
 from config import *
-from inspect_data import *
 from dataset import *
 
 from glyphnet import *
-
 
 
 print(f"Using {device} device")
@@ -113,122 +112,82 @@ def train_epochs(train_loader, train_eval_loader, val_loader, model, loss_fn, op
 def main():
     torch.manual_seed(SEED)
 
-    image_paths: list[Path] = find_images(DATA_DIR)
-
-    label_counts: Counter[str] = inspect_images(image_paths)
-
-    selected_classes: list[str] = select_top_k_class(label_counts, TOP_K_CLASSES,)
-
-    class_to_idx: dict[str, int] = build_class_to_idx(selected_classes)
-
-    selected_image_paths: list[Path] = filter_image_paths(image_paths, selected_classes)
-
-    train_image_paths, val_image_paths, test_image_paths = split_dataset(
-        selected_image_paths,
-        SEED,
-    )
-
-    train_loader: DataLoader = create_dataloader(
-        image_paths=train_image_paths,
-        class_to_idx=class_to_idx,
-        batch_size=BATCH_SIZE,
-        augment=True,
-        shuffle=True,
-        num_workers=0
-    )
+    df: pd.DataFrame = pd.read_csv(DATA_DIR / "Tableau_imagette_MB.csv")
+    df = df[~df["Deno"].str.match(R"^.* \([0-9]+\)$")] # filter to keep single sign images
     
-    train_eval_loader = create_dataloader(
-        image_paths=train_image_paths,
-        class_to_idx=class_to_idx,
-        batch_size=BATCH_SIZE,
-        augment=False,
-        shuffle=False,
-        num_workers=0,
-    )
+    models: list[str] = df.columns[1:].array
+    for model_name in models:       
+        df2 = df[df[model_name].notna()]
+    
+        image_paths: list[Path] = [DATA_DIR / (deno.strip() +".png") for deno in df2["Deno"].array]
+        image_size = get_min_size(image_paths)
+    
+        labels: list[str] = df2[model_name].array
+        num_labels: int = len(set(labels))
+        
+        try:
+            class_to_idx, train_loader, train_eval_loader, val_loader, test_loader = read_dataset(image_paths, labels, image_size)
+        except:
+            continue
 
-    val_loader: DataLoader = create_dataloader(
-        image_paths=val_image_paths,
-        class_to_idx=class_to_idx,
-        batch_size=BATCH_SIZE,
-        augment=False,
-        shuffle=False,
-        num_workers=0
-    )
+        model = Glyphnet(num_labels).to(device)
+        loss_fn = nn.CrossEntropyLoss()
 
-    test_loader: DataLoader = create_dataloader(
-        image_paths=test_image_paths,
-        class_to_idx=class_to_idx,
-        batch_size=BATCH_SIZE,
-        augment=False,
-        shuffle=False,
-        num_workers=0
-    )
+        optimizer: Adam = Adam(
+            model.parameters(),
+            lr=LEARNING_RATE,
+        )
 
-    num_classes: int = len(selected_classes)
+        history = train_epochs(
+            train_loader=train_loader,
+            train_eval_loader=train_eval_loader,
+            val_loader=val_loader,
+            model=model,
+            loss_fn=loss_fn,
+            optimizer=optimizer,
+        )
 
-    model = Glyphnet(num_classes).to(device)
+        training_record: dict[str, object] = {
+            "config": {
+                "seed": SEED,
+                "epochs": EPOCHS,
+                "batch_size": BATCH_SIZE,
+                "learning_rate": LEARNING_RATE,
+                "image_size": image_size,
+                "num_classes": len(class_to_idx),
+                "device": str(device),
+            },
+            "history": history,
+        }
 
-    loss_fn = nn.CrossEntropyLoss()
+        output_dir: Path = PROJECT_ROOT / "outputs" / model_name / str(EPOCHS)
+        output_dir.mkdir(parents=True, exist_ok=True)
 
-    optimizer: Adam = Adam(
-        model.parameters(),
-        lr=LEARNING_RATE,
-    )
+        history_path: Path = output_dir / "training_history.json"
+        history_path.write_text(
+            data=json.dumps(training_record, indent=2),
+            encoding="utf-8"
+        )
+        print(f"\nStart to test {model_name} model!")
 
-    history = train_epochs(
-        train_loader=train_loader,
-        train_eval_loader=train_eval_loader,
-        val_loader=val_loader,
-        model=model,
-        loss_fn=loss_fn,
-        optimizer=optimizer,
-    )
+        test_loss, test_accuracy = test_loop(test_loader, model, loss_fn)
+        print(
+            f"Test loss: {test_loss:.4f}, "
+            f"accuracy: {test_accuracy:.2%}"
+        )
 
-    training_record: dict[str, object] = {
-        "config": {
-            "seed": SEED,
-            "epochs": EPOCHS,
-            "batch_size": BATCH_SIZE,
-            "learning_rate": LEARNING_RATE,
-            "image_size": IMAGE_SIZE,
-            "num_classes": len(class_to_idx),
-            "device": str(device),
-        },
-        "history": history,
-    }
-
-    output_dir: Path = PROJECT_ROOT / "outputs"
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    history_path: Path = output_dir / f"training_history_epochs_{EPOCHS}.json"
-
-    history_path.write_text(
-        data=json.dumps(training_record, indent=2),
-        encoding="utf-8"
-    )
-
-    print("\nStart to test model!")
-
-    test_loss, test_accuracy = test_loop(test_loader, model, loss_fn)
-
-    print(
-        f"Test loss: {test_loss:.4f}, "
-        f"accuracy: {test_accuracy:.2%}"
-    )
-
-    model_path = output_dir / f"glyphnet_epochs_{EPOCHS}.pt" 
- 
-    torch.save(
-        {
-            "model_state_dict": model.state_dict(),
-            "class_to_idx": class_to_idx,
-            "epoch": EPOCHS,
-            "image_size": IMAGE_SIZE,
-        },
-        model_path,
-    )
-
-    print(f"Model saved to: {model_path}")
+        model_path = output_dir / "model.pt"
+        torch.save(
+            {
+                "model_state_dict": model.state_dict(),
+                "class_to_idx": class_to_idx,
+                "epoch": EPOCHS,
+                "image_size": image_size,
+            },
+            model_path,
+        )
+        
+        print(f"Model saved to: {model_path}")
 
 
 if __name__ == "__main__":
