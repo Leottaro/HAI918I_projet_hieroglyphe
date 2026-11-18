@@ -12,11 +12,12 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import InterpolationMode, RandomAffine, ToTensor
 import torchvision.transforms.functional as TF
 import albumentations as A
+import cv2
 
 from sklearn.model_selection import train_test_split
 
 from config import (
-    BATCH_SIZE, TRAIN_RATIO, VAL_RATIO, TEST_RATIO, SEED,
+    BATCH_SIZE, TRAIN_RATIO, TRAINING_IMG_LOG_DIR, VAL_RATIO, TEST_RATIO, SEED,
     AUG_MAX_SHIFT_PERCENT, AUG_MAX_ROTATION_DEG, AUG_ZOOM_RANGE, BALANCE_CAP_FACTOR,
 )
 
@@ -32,19 +33,28 @@ def build_class_to_idx(selected_classes: list[str]) -> dict[str, int]:
 
     return class_to_idx
 
-def get_min_size(images_path: list[Path]) -> tuple[int, int]:
+def get_min_size(images_path: list[Path]) -> int:
     min_width: int = math.inf
     min_height: int = math.inf
     for path in images_path:
         with Image.open(path) as image:
             min_width = min(min_width, image.size[0])
             min_height = min(min_height, image.size[1])
-    return (min_width, min_height)
+    return max(min_width, min_height)
 
-RANDOM_AFFINE: A.BasicTransform = A.Affine(scale=AUG_ZOOM_RANGE, translate_percent=(-AUG_MAX_SHIFT_PERCENT, AUG_MAX_SHIFT_PERCENT), rotate=(-AUG_MAX_ROTATION_DEG, AUG_MAX_ROTATION_DEG))
+# Avoid Albumentations' default zero (black) border when translating/rotating.
+RANDOM_AFFINE: A.BasicTransform = A.Affine(
+    p=1.,
+    scale=AUG_ZOOM_RANGE,
+    translate_percent=(-AUG_MAX_SHIFT_PERCENT, AUG_MAX_SHIFT_PERCENT),
+    rotate=(-AUG_MAX_ROTATION_DEG, AUG_MAX_ROTATION_DEG),
+    keep_ratio=False,
+    border_mode=cv2.BORDER_REPLICATE,
+)
 # random shift + rotation + zoom (Barucci et al. 2021, Sec. II-B.3)
 def random_shift_rotate_zoom(image: Image.Image) -> Image.Image:
-    return Image.fromarray(RANDOM_AFFINE(image=np.asarray(image))["image"])
+    transformed = RANDOM_AFFINE(image=np.asarray(image.convert("RGB")))
+    return Image.fromarray(transformed["image"])
 
 # One training example = a source image + the operations to apply when it is loaded.
 @dataclass(frozen=True)
@@ -62,11 +72,11 @@ class Sample:
 # custom dataset class for pytorch
 class HieroglyphDataset(Dataset):
 
-    def __init__(self, samples: list[Sample], class_to_idx: dict[str, int], image_size: tuple[int, int]):
+    def __init__(self, samples: list[Sample], class_to_idx: dict[str, int], image_size: int):
         super().__init__()
         self.samples: list[Sample] = samples
         self.class_to_idx: dict[str, int] = class_to_idx
-        self.image_size: tuple[int, int] = image_size
+        self.image_size: int = image_size
         self.to_tensor: ToTensor = ToTensor()
 
 
@@ -76,23 +86,38 @@ class HieroglyphDataset(Dataset):
 
     def __getitem__(self, index: int) -> tuple[Tensor, int]:
         sample: Sample = self.samples[index]
+        img_test_path: Path = TRAINING_IMG_LOG_DIR / sample.path.name
+        save_image: bool = False
         
         with Image.open(sample.path) as file:
-            image: Image.Image = file.convert("L")
-
-        if sample.jitter:
-            image = random_shift_rotate_zoom(image)
+            image = file.convert("L")
 
         if sample.flip:
             image = ImageOps.mirror(image)
+            save_image = True
+            img_test_path = img_test_path.with_name(
+                f"{img_test_path.stem}_flip{img_test_path.suffix}"
+            )
+        
+        if sample.jitter:
+            image = random_shift_rotate_zoom(image)
+            save_image = True
+            img_test_path = img_test_path.with_name(
+                f"{img_test_path.stem}_jitter{img_test_path.suffix}"
+            )
+
 
         # Resize proportionally, then center the image on a black canvas.
         image = ImageOps.pad(
             image,
-            self.image_size,
+            (self.image_size, self.image_size),
             method=Image.Resampling.LANCZOS,
-            color=0,
+            color=None,
         )
+        
+        if save_image and not img_test_path.exists():
+            TRAINING_IMG_LOG_DIR.mkdir(parents=True, exist_ok=True)
+            image.save(img_test_path)
 
         return self.to_tensor(image), self.class_to_idx[sample.label]
 
@@ -186,7 +211,7 @@ def create_dataloader(
     samples: list[Sample],
     class_to_idx: dict[str, int],
     batch_size: int,
-    image_size: tuple[int, int],
+    image_size: int,
     augment: bool,
     shuffle: bool,
     num_workers: int = 0,
@@ -205,7 +230,7 @@ def create_dataloader(
 
     return dataloader
 
-def read_dataset(image_paths: list[Path], labels: list[str], image_size: tuple[int, int]) -> tuple[dict[str, int], DataLoader, DataLoader, DataLoader, DataLoader]:
+def read_dataset(image_paths: list[Path], labels: list[str], image_size: int) -> tuple[dict[str, int], DataLoader, DataLoader, DataLoader, DataLoader]:
     # label_counts: Counter[str] = inspect_images(image_paths)
     label_counts: Counter[str] = Counter()
     for label in labels:

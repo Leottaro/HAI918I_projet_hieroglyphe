@@ -203,7 +203,7 @@ def main():
         df2 = df[df[model_name].notna()]
     
         image_paths: list[Path] = [DATA_DIR / (deno.strip() +".png") for deno in df2["Deno"].array]
-        image_size = get_min_size(image_paths)
+        image_size: int = get_min_size(image_paths)
     
         labels: list[str] = df2[model_name].array
         

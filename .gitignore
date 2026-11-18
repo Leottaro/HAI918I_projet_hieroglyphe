@@ -1,9 +1,6 @@
 # Created by https://www.toptal.com/developers/gitignore/api/venv,latex,python,dotenv
 # Edit at https://www.toptal.com/developers/gitignore?templates=venv,latex,python,dotenv
 
-# Downloaded datasets
-/data/
-
 ### dotenv ###
 .env
 
@@ -500,3 +497,6 @@ pyvenv.cfg
 pip-selfcheck.json
 
 # End of https://www.toptal.com/developers/gitignore/api/venv,latex,python,dotenv
+
+/data/
+/Training_Image_DAO_Sith/

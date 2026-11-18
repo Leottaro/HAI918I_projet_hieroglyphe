@@ -7,6 +7,7 @@ import torch
 PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
 
 DATA_DIR: Path = PROJECT_ROOT / "Image_DAO_Sith"
+TRAINING_IMG_LOG_DIR: Path = PROJECT_ROOT / "Training_Image_DAO_Sith"
 
 device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
 
