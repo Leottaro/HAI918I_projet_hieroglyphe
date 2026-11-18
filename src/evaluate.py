@@ -26,7 +26,7 @@ def load_model(model_path: Path) -> tuple[Glyphnet, dict[str, int]]:
     model: Glyphnet = Glyphnet(num_classes=len(class_to_idx))
 
     model.load_state_dict(checkpoint["model_state_dict"])
-    model = model.to(device)
+    model = model.to(DEVICE)
     model.eval()
 
     return model, class_to_idx
@@ -112,7 +112,7 @@ def collect_predictions(model: Glyphnet, dataloader: DataLoader) -> tuple[list[i
     model.eval()
     with torch.no_grad():
         for X, y in dataloader:
-            X = X.to(device)
+            X = X.to(DEVICE)
 
             # get predicted score for every classes
             logits: Tensor = model(X)

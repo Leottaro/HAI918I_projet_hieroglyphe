@@ -4,7 +4,7 @@ from torch import nn, Tensor
 from torchinfo import summary
 
 class Glyphnet(nn.Module):
-    def __init__(self, num_classes=40):
+    def __init__(self, num_classes: int):
         super().__init__()
 
         self.num_classes = num_classes

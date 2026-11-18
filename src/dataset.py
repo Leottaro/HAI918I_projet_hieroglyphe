@@ -5,9 +5,10 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageTransform
 import pandas as pd
 from torch import Tensor
+import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import InterpolationMode, RandomAffine, ToTensor
 import torchvision.transforms.functional as TF
@@ -17,7 +18,7 @@ import cv2
 from sklearn.model_selection import train_test_split
 
 from config import (
-    BATCH_SIZE, TRAIN_RATIO, TRAINING_IMG_LOG_DIR, VAL_RATIO, TEST_RATIO, SEED,
+    AFFINE_TRANSFORM, BATCH_SIZE, TRAIN_RATIO, TRAINING_IMG_LOG_DIR, VAL_RATIO, TEST_RATIO, SEED,
     AUG_MAX_SHIFT_PERCENT, AUG_MAX_ROTATION_DEG, AUG_ZOOM_RANGE, BALANCE_CAP_FACTOR,
 )
 
@@ -78,6 +79,19 @@ class HieroglyphDataset(Dataset):
         self.class_to_idx: dict[str, int] = class_to_idx
         self.image_size: int = image_size
         self.to_tensor: ToTensor = ToTensor()
+        self.resize_pad_transform = A.Compose([
+            A.LongestMaxSize(
+                p = 1.0,
+                max_size=self.image_size,
+            ),
+            A.PadIfNeeded(
+                p=1.,
+                min_height=self.image_size,
+                min_width=self.image_size,
+                border_mode=cv2.BORDER_REPLICATE,
+                position="center",
+            ),
+        ])
 
 
     def __len__(self) -> int:
@@ -89,31 +103,23 @@ class HieroglyphDataset(Dataset):
         img_test_path: Path = TRAINING_IMG_LOG_DIR / sample.path.name
         save_image: bool = False
         
+        TRAINING_IMG_LOG_DIR.mkdir(parents=True, exist_ok=True)
+        
         with Image.open(sample.path) as file:
             image = file.convert("L")
-
+      
         if sample.flip:
             image = ImageOps.mirror(image)
             save_image = True
-            img_test_path = img_test_path.with_name(
-                f"{img_test_path.stem}_flip{img_test_path.suffix}"
-            )
+            img_test_path = img_test_path.with_name(f"{img_test_path.stem}_flip{img_test_path.suffix}")
         
         if sample.jitter:
-            image = random_shift_rotate_zoom(image)
+            image = Image.fromarray(AFFINE_TRANSFORM(image=np.asarray(image))["image"])
             save_image = True
-            img_test_path = img_test_path.with_name(
-                f"{img_test_path.stem}_jitter{img_test_path.suffix}"
-            )
-
+            img_test_path = img_test_path.with_name(f"{img_test_path.stem}_jitter{img_test_path.suffix}")
 
         # Resize proportionally, then center the image on a black canvas.
-        image = ImageOps.pad(
-            image,
-            (self.image_size, self.image_size),
-            method=Image.Resampling.LANCZOS,
-            color=None,
-        )
+        image = Image.fromarray(self.resize_pad_transform(image=np.asarray(image))["image"])
         
         if save_image and not img_test_path.exists():
             TRAINING_IMG_LOG_DIR.mkdir(parents=True, exist_ok=True)

@@ -11,10 +11,10 @@ from pathlib import Path
 from config import *
 from dataset import *
 
+from evaluate import *
 from glyphnet import *
 
-
-print(f"Using {device} device")
+print(f"Using {DEVICE} device")
 
 
 def train_loop(dataloader, model, loss_fn, optimizer)-> tuple[float, float]:
@@ -24,8 +24,8 @@ def train_loop(dataloader, model, loss_fn, optimizer)-> tuple[float, float]:
 
     model.train()
     for images, labels in dataloader:
-        images = images.to(device)
-        labels = labels.to(device)
+        images = images.to(DEVICE)
+        labels = labels.to(DEVICE)
 
         # Compute prediction and loss
         pred: Tensor = model(images)
@@ -58,8 +58,8 @@ def test_loop(dataloader, model, loss_fn) -> tuple[float, float]:
 
     with torch.no_grad():
         for X, y in dataloader:
-            X = X.to(device)
-            y = y.to(device)
+            X = X.to(DEVICE)
+            y = y.to(DEVICE)
             pred = model(X)
             average_loss += loss_fn(pred, y).item() * y.size(0)
             accuracy += (pred.argmax(1) == y).type(torch.float).sum().item()
@@ -73,38 +73,28 @@ def train_epochs(train_loader, train_eval_loader, val_loader, model, loss_fn, op
     history: list[dict[str, int | float]] = []
     
     for epoch in range(EPOCHS):
-        print(f"\nEpoch {epoch + 1}/{EPOCHS}")
+        print(f"Epoch {epoch + 1}/{EPOCHS}")
 
         train_loss, train_accuracy = train_loop(train_loader, model, loss_fn, optimizer)
 
-        print(
-            f"Train loss: {train_loss:.4f}, "
-            f"accuracy: {train_accuracy:.2%}"
-        )
+        print(f"\tTrain loss: {train_loss:.4f}, \taccuracy: {train_accuracy:.2%}")
 
         val_loss, val_accuracy = test_loop(val_loader, model, loss_fn)
         
         clean_train_loss, clean_train_accuracy = test_loop(train_eval_loader, model, loss_fn)
-        print(f"Train (clean, eval mode) loss: {clean_train_loss:.4f}, accuracy: {clean_train_accuracy:.2%}")
+        print(f"\tTrain (clean, eval mode) loss: {clean_train_loss:.4f}, accuracy: {clean_train_accuracy:.2%}")
 
-        history.append(
-            {
-                "epoch": epoch + 1,
-                "train_loss": train_loss,
-                "train_accuracy": train_accuracy,
-                "clean_train_loss": clean_train_loss,
-                "clean_train_accuracy": clean_train_accuracy,
-                "val_loss": val_loss,
-                "val_accuracy": val_accuracy,
-            }
-        )
+        history.append({
+            "epoch": epoch + 1,
+            "train_loss": train_loss,
+            "train_accuracy": train_accuracy,
+            "clean_train_loss": clean_train_loss,
+            "clean_train_accuracy": clean_train_accuracy,
+            "val_loss": val_loss,
+            "val_accuracy": val_accuracy,
+        })
 
-        print(
-            f"Val loss: {val_loss:.4f}, "
-            f"accuracy: {val_accuracy:.2%}"
-        )
-
-    print("\nFinish to train model!")
+        print(f"\tVal loss: {val_loss:.4f}, accuracy: {val_accuracy:.2%}")
 
     return history
 
@@ -116,7 +106,9 @@ def main():
     df = df[~df["Deno"].str.match(R"^.* \([0-9]+\)$")] # filter to keep single sign images
     
     models: list[str] = df.columns[1:].array
-    for model_name in models:       
+    for model_name in models: 
+        print(f"\n\n\n\nTraining {model_name} model...")
+        
         df2 = df[df[model_name].notna()]
     
         image_paths: list[Path] = [DATA_DIR / (deno.strip() +".png") for deno in df2["Deno"].array]
@@ -128,9 +120,10 @@ def main():
         try:
             class_to_idx, train_loader, train_eval_loader, val_loader, test_loader = read_dataset(image_paths, labels, image_size)
         except:
+            print("couldn't read dataset!")
             continue
 
-        model = Glyphnet(num_labels).to(device)
+        model = Glyphnet(num_labels).to(DEVICE)
         loss_fn = nn.CrossEntropyLoss()
 
         optimizer: Adam = Adam(
@@ -155,28 +148,26 @@ def main():
                 "learning_rate": LEARNING_RATE,
                 "image_size": image_size,
                 "num_classes": len(class_to_idx),
-                "device": str(device),
+                "device": str(DEVICE),
             },
             "history": history,
         }
 
         output_dir: Path = PROJECT_ROOT / "outputs" / model_name / str(EPOCHS)
         output_dir.mkdir(parents=True, exist_ok=True)
-
+        model_path = output_dir / "model.pt"
         history_path: Path = output_dir / "training_history.json"
+        matrix_path: Path = output_dir / "confusion_matrix.png"
+
         history_path.write_text(
             data=json.dumps(training_record, indent=2),
             encoding="utf-8"
         )
-        print(f"\nStart to test {model_name} model!")
-
+        
+        print(f"\n\nTesting {model_name} model...")
         test_loss, test_accuracy = test_loop(test_loader, model, loss_fn)
-        print(
-            f"Test loss: {test_loss:.4f}, "
-            f"accuracy: {test_accuracy:.2%}"
-        )
+        print(f"Test loss: {test_loss:.4f}, accuracy: {test_accuracy:.2%}")
 
-        model_path = output_dir / "model.pt"
         torch.save(
             {
                 "model_state_dict": model.state_dict(),
@@ -187,7 +178,15 @@ def main():
             model_path,
         )
         
-        print(f"Model saved to: {model_path}")
+        print(f"\nGenerating {model_name} figures...")
+        
+        plot_training_history(history_path, output_dir, model_name)
+        
+        # draw training curves (loss and accuracy)
+        y_true, y_pred = collect_predictions(model, test_loader)
+        report_results(y_true, y_pred, class_to_idx, matrix_path, model_name)
+        
+        print(f"saved everything in: {output_dir}")
 
 
 if __name__ == "__main__":
