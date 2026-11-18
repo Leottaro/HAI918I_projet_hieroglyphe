@@ -111,17 +111,17 @@ def collect_predictions(model: Glyphnet, dataloader: DataLoader) -> tuple[list[i
 
     model.eval()
     with torch.no_grad():
-        for X, y in dataloader:
-            X = X.to(DEVICE)
+        for images, labels in dataloader:
+            images = images.to(DEVICE)
 
             # get predicted score for every classes
-            logits: Tensor = model(X)
+            logits: Tensor = model(images)
 
             # get predicted class
             predictions: Tensor = logits.argmax(dim=1)
 
             # put batch data into list
-            y_true.extend(y.cpu().tolist())
+            y_true.extend(labels.cpu().tolist())
             y_pred.extend(predictions.cpu().tolist())
 
     return y_true, y_pred

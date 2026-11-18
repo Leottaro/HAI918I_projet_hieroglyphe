@@ -69,7 +69,7 @@ def test_loop(dataloader, model, loss_fn) -> tuple[float, float]:
     return average_loss, accuracy
 
 
-def train_epochs(train_loader, train_eval_loader, val_loader, model, loss_fn, optimizer) -> list[dict[str, int | float]]:
+def train_epochs(train_loader, clean_train_loader, val_loader, model, loss_fn, optimizer) -> list[dict[str, int | float]]:
     history: list[dict[str, int | float]] = []
     
     for epoch in range(EPOCHS):
@@ -81,7 +81,7 @@ def train_epochs(train_loader, train_eval_loader, val_loader, model, loss_fn, op
 
         val_loss, val_accuracy = test_loop(val_loader, model, loss_fn)
         
-        clean_train_loss, clean_train_accuracy = test_loop(train_eval_loader, model, loss_fn)
+        clean_train_loss, clean_train_accuracy = test_loop(clean_train_loader, model, loss_fn)
         print(f"\tTrain (clean, eval mode) loss: {clean_train_loss:.4f}, accuracy: {clean_train_accuracy:.2%}")
 
         history.append({
@@ -112,15 +112,14 @@ def main():
         df2 = df[df[model_name].notna()]
     
         image_paths: list[Path] = [DATA_DIR / (deno.strip() +".png") for deno in df2["Deno"].array]
-        image_size = get_min_size(image_paths)
     
         labels: list[str] = df2[model_name].array
         num_labels: int = len(set(labels))
         
         try:
-            class_to_idx, train_loader, train_eval_loader, val_loader, test_loader = read_dataset(image_paths, labels, image_size)
-        except:
-            print("couldn't read dataset!")
+            class_to_idx, train_loader, clean_train_loader, val_loader, test_loader = read_dataset(image_paths, labels)
+        except ValueError as e:
+            print(f"couldn't read dataset: {e}")
             continue
 
         model = Glyphnet(num_labels).to(DEVICE)
@@ -133,7 +132,7 @@ def main():
 
         history = train_epochs(
             train_loader=train_loader,
-            train_eval_loader=train_eval_loader,
+            clean_train_loader=clean_train_loader,
             val_loader=val_loader,
             model=model,
             loss_fn=loss_fn,
@@ -146,34 +145,33 @@ def main():
                 "epochs": EPOCHS,
                 "batch_size": BATCH_SIZE,
                 "learning_rate": LEARNING_RATE,
-                "image_size": image_size,
+                "image_size": IMAGE_SIZE,
                 "num_classes": len(class_to_idx),
                 "device": str(DEVICE),
             },
             "history": history,
         }
 
-        output_dir: Path = PROJECT_ROOT / "outputs" / model_name / str(EPOCHS)
+        print(f"\n\nTesting {model_name} model...")
+        test_loss, test_accuracy = test_loop(test_loader, model, loss_fn)
+        print(f"Test loss: {test_loss:.4f}, accuracy: {test_accuracy:.2%}")
+        
+        output_dir: Path = PROJECT_ROOT / "outputs" / model_name / CONFIG_STR
         output_dir.mkdir(parents=True, exist_ok=True)
-        model_path = output_dir / "model.pt"
+        model_path = output_dir / f"model.pt"
         history_path: Path = output_dir / "training_history.json"
-        matrix_path: Path = output_dir / "confusion_matrix.png"
-
+        matrix_path: Path = output_dir / f"confusion_matrix_{test_accuracy}acc_{test_loss}loss.png"
         history_path.write_text(
             data=json.dumps(training_record, indent=2),
             encoding="utf-8"
         )
-        
-        print(f"\n\nTesting {model_name} model...")
-        test_loss, test_accuracy = test_loop(test_loader, model, loss_fn)
-        print(f"Test loss: {test_loss:.4f}, accuracy: {test_accuracy:.2%}")
 
         torch.save(
             {
                 "model_state_dict": model.state_dict(),
                 "class_to_idx": class_to_idx,
                 "epoch": EPOCHS,
-                "image_size": image_size,
+                "image_size": IMAGE_SIZE,
             },
             model_path,
         )

@@ -1,25 +1,23 @@
-import math
 import random
 from collections import Counter, defaultdict
 from dataclasses import dataclass, replace
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageOps, ImageTransform
+from PIL import Image, ImageOps
 import pandas as pd
 from torch import Tensor
 import torch
 from torch.utils.data import Dataset, DataLoader
-from torchvision.transforms import InterpolationMode, RandomAffine, ToTensor
-import torchvision.transforms.functional as TF
+from torchvision.transforms import ToTensor
 import albumentations as A
 import cv2
 
 from sklearn.model_selection import train_test_split
 
 from config import (
-    AFFINE_TRANSFORM, BATCH_SIZE, TRAIN_RATIO, TRAINING_IMG_LOG_DIR, VAL_RATIO, TEST_RATIO, SEED,
-    AUG_MAX_SHIFT_PERCENT, AUG_MAX_ROTATION_DEG, AUG_ZOOM_RANGE, BALANCE_CAP_FACTOR,
+    AFFINE_TRANSFORM, BATCH_SIZE, IMAGE_SIZE, RESIZE_PAD_TRANSFORM, TRAIN_RATIO, TRAINING_IMG_LOG_DIR, VAL_RATIO, TEST_RATIO, SEED,
+    AUG_MAX_SHIFT_PERCENT, AUG_MAX_ROTATION_DEG, AUG_ZOOM_RANGE, BALANCE_AUGMENTATION_FACTOR,
 )
 
 def build_class_to_idx(selected_classes: list[str]) -> dict[str, int]:
@@ -33,15 +31,6 @@ def build_class_to_idx(selected_classes: list[str]) -> dict[str, int]:
         class_to_idx[class_name] = index
 
     return class_to_idx
-
-def get_min_size(images_path: list[Path]) -> int:
-    min_width: int = math.inf
-    min_height: int = math.inf
-    for path in images_path:
-        with Image.open(path) as image:
-            min_width = min(min_width, image.size[0])
-            min_height = min(min_height, image.size[1])
-    return max(min_width, min_height)
 
 # Avoid Albumentations' default zero (black) border when translating/rotating.
 RANDOM_AFFINE: A.BasicTransform = A.Affine(
@@ -73,25 +62,11 @@ class Sample:
 # custom dataset class for pytorch
 class HieroglyphDataset(Dataset):
 
-    def __init__(self, samples: list[Sample], class_to_idx: dict[str, int], image_size: int):
+    def __init__(self, samples: list[Sample], class_to_idx: dict[str, int]):
         super().__init__()
         self.samples: list[Sample] = samples
         self.class_to_idx: dict[str, int] = class_to_idx
-        self.image_size: int = image_size
         self.to_tensor: ToTensor = ToTensor()
-        self.resize_pad_transform = A.Compose([
-            A.LongestMaxSize(
-                p = 1.0,
-                max_size=self.image_size,
-            ),
-            A.PadIfNeeded(
-                p=1.,
-                min_height=self.image_size,
-                min_width=self.image_size,
-                border_mode=cv2.BORDER_REPLICATE,
-                position="center",
-            ),
-        ])
 
 
     def __len__(self) -> int:
@@ -119,7 +94,7 @@ class HieroglyphDataset(Dataset):
             img_test_path = img_test_path.with_name(f"{img_test_path.stem}_jitter{img_test_path.suffix}")
 
         # Resize proportionally, then center the image on a black canvas.
-        image = Image.fromarray(self.resize_pad_transform(image=np.asarray(image))["image"])
+        image = Image.fromarray(RESIZE_PAD_TRANSFORM(image=np.asarray(image))["image"])
         
         if save_image and not img_test_path.exists():
             TRAINING_IMG_LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -129,7 +104,7 @@ class HieroglyphDataset(Dataset):
 
 
 # Training-set balancing + augmentation, as in the paper:
-#   1. classes with more than  BALANCE_CAP_FACTOR * mean  images are randomly downsampled
+#   1. classes with more than  BALANCE_AUGMENTATION_FACTOR * mean  images are randomly downsampled
 #   2. classes with fewer than mean images are topped up to the mean with
 #      randomly shifted / rotated / zoomed copies
 #   3. every image of the resulting set also gets a horizontally flipped copy
@@ -139,8 +114,8 @@ def augment_training_samples(samples: list[Sample], seed: int = SEED) -> list[Sa
         samples_by_class[sample.label].append(sample)
 
     mean_count: float = len(samples) / len(samples_by_class)
-    upper_limit: int = int(BALANCE_CAP_FACTOR * mean_count)
-    lower_limit: int = int(round(mean_count))
+    upper_limit: int = int(BALANCE_AUGMENTATION_FACTOR * mean_count)
+    lower_limit: int = round(mean_count)
 
     rng = random.Random(seed)
     new_samples: list[Sample] = []
@@ -217,7 +192,6 @@ def create_dataloader(
     samples: list[Sample],
     class_to_idx: dict[str, int],
     batch_size: int,
-    image_size: int,
     augment: bool,
     shuffle: bool,
     num_workers: int = 0,
@@ -225,7 +199,7 @@ def create_dataloader(
     if augment:
         samples = augment_training_samples(samples)
 
-    image_dataset: HieroglyphDataset = HieroglyphDataset(samples, class_to_idx, image_size)
+    image_dataset: HieroglyphDataset = HieroglyphDataset(samples, class_to_idx)
 
     dataloader: DataLoader = DataLoader(
         image_dataset,
@@ -236,7 +210,7 @@ def create_dataloader(
 
     return dataloader
 
-def read_dataset(image_paths: list[Path], labels: list[str], image_size: int) -> tuple[dict[str, int], DataLoader, DataLoader, DataLoader, DataLoader]:
+def read_dataset(image_paths: list[Path], labels: list[str]) -> tuple[dict[str, int], DataLoader, DataLoader, DataLoader, DataLoader]:
     # label_counts: Counter[str] = inspect_images(image_paths)
     label_counts: Counter[str] = Counter()
     for label in labels:
@@ -253,7 +227,6 @@ def read_dataset(image_paths: list[Path], labels: list[str], image_size: int) ->
         samples=train_samples,
         class_to_idx=class_to_idx,
         batch_size=BATCH_SIZE,
-        image_size=image_size,
         augment=True,
         shuffle=True,
         num_workers=0
@@ -262,7 +235,6 @@ def read_dataset(image_paths: list[Path], labels: list[str], image_size: int) ->
         samples=train_samples,
         class_to_idx=class_to_idx,
         batch_size=BATCH_SIZE,
-        image_size=image_size,
         augment=False,
         shuffle=False,
         num_workers=0,
@@ -271,7 +243,6 @@ def read_dataset(image_paths: list[Path], labels: list[str], image_size: int) ->
         samples=val_samples,
         class_to_idx=class_to_idx,
         batch_size=BATCH_SIZE,
-        image_size=image_size,
         augment=False,
         shuffle=False,
         num_workers=0
@@ -280,7 +251,6 @@ def read_dataset(image_paths: list[Path], labels: list[str], image_size: int) ->
         samples=test_samples,
         class_to_idx=class_to_idx,
         batch_size=BATCH_SIZE,
-        image_size=image_size,
         augment=False,
         shuffle=False,
         num_workers=0
