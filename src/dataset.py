@@ -16,7 +16,7 @@ import cv2
 from sklearn.model_selection import train_test_split
 
 from config import (
-    AFFINE_TRANSFORM, BATCH_SIZE, IMAGE_SIZE, RESIZE_PAD_TRANSFORM, TRAIN_RATIO, TRAINING_IMG_LOG_DIR, VAL_RATIO, TEST_RATIO, SEED,
+    AUGMENTATION_TRANSFORMS, BATCH_SIZE, RESIZE_PAD_TRANSFORM, TRAIN_RATIO, TRAINING_IMG_LOG_DIR, VAL_RATIO, TEST_RATIO, SEED,
     AUG_MAX_SHIFT_PERCENT, AUG_MAX_ROTATION_DEG, AUG_ZOOM_RANGE, BALANCE_AUGMENTATION_FACTOR,
 )
 
@@ -89,7 +89,8 @@ class HieroglyphDataset(Dataset):
             img_test_path = img_test_path.with_name(f"{img_test_path.stem}_flip{img_test_path.suffix}")
         
         if sample.jitter:
-            image = Image.fromarray(AFFINE_TRANSFORM(image=np.asarray(image))["image"])
+            transform = random.choice(AUGMENTATION_TRANSFORMS)
+            image = Image.fromarray(transform(image=np.asarray(image))["image"])
             save_image = True
             img_test_path = img_test_path.with_name(f"{img_test_path.stem}_jitter{img_test_path.suffix}")
 

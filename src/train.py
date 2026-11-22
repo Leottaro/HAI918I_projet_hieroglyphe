@@ -156,7 +156,7 @@ def main():
         test_loss, test_accuracy = test_loop(test_loader, model, loss_fn)
         print(f"Test loss: {test_loss:.4f}, accuracy: {test_accuracy:.2%}")
         
-        output_dir: Path = PROJECT_ROOT / "outputs" / model_name / CONFIG_STR
+        output_dir: Path = CONFIG_PATH / model_name
         output_dir.mkdir(parents=True, exist_ok=True)
         model_path = output_dir / f"model.pt"
         history_path: Path = output_dir / "training_history.json"
