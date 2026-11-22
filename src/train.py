@@ -1,4 +1,5 @@
 import json
+import shutil
 import pandas as pd
 
 import torch
@@ -72,8 +73,8 @@ def test_loop(dataloader, model, loss_fn) -> tuple[float, float]:
 def train_epochs(train_loader, clean_train_loader, val_loader, model, loss_fn, optimizer) -> list[dict[str, int | float]]:
     history: list[dict[str, int | float]] = []
     
-    for epoch in range(EPOCHS):
-        print(f"Epoch {epoch + 1}/{EPOCHS}")
+    for epoch in range(CONFIG.epochs):
+        print(f"Epoch {epoch + 1}/{CONFIG.epochs}")
 
         train_loss, train_accuracy = train_loop(train_loader, model, loss_fn, optimizer)
 
@@ -100,7 +101,7 @@ def train_epochs(train_loader, clean_train_loader, val_loader, model, loss_fn, o
 
 
 def main():
-    torch.manual_seed(SEED)
+    torch.manual_seed(CONFIG.seed)
 
     df: pd.DataFrame = pd.read_csv(DATA_DIR / "Tableau_imagette_MB.csv")
     df = df[~df["Deno"].str.match(R"^.* \([0-9]+\)$")] # filter to keep single sign images
@@ -127,7 +128,7 @@ def main():
 
         optimizer: Adam = Adam(
             model.parameters(),
-            lr=LEARNING_RATE,
+            lr=CONFIG.learning_rate,
         )
 
         history = train_epochs(
@@ -139,53 +140,61 @@ def main():
             optimizer=optimizer,
         )
 
-        training_record: dict[str, object] = {
-            "config": {
-                "seed": SEED,
-                "epochs": EPOCHS,
-                "batch_size": BATCH_SIZE,
-                "learning_rate": LEARNING_RATE,
-                "image_size": IMAGE_SIZE,
-                "num_classes": len(class_to_idx),
-                "device": str(DEVICE),
-            },
-            "history": history,
-        }
-
         print(f"\n\nTesting {model_name} model...")
         test_loss, test_accuracy = test_loop(test_loader, model, loss_fn)
         print(f"Test loss: {test_loss:.4f}, accuracy: {test_accuracy:.2%}")
         
-        output_dir: Path = CONFIG_PATH / model_name
+        output_dir: Path = OUTPUT_DIR / CONFIG.getDirName() / model_name
         output_dir.mkdir(parents=True, exist_ok=True)
-        model_path = output_dir / f"model.pt"
-        history_path: Path = output_dir / "training_history.json"
-        matrix_path: Path = output_dir / f"confusion_matrix_{test_accuracy}acc_{test_loss}loss.png"
-        history_path.write_text(
-            data=json.dumps(training_record, indent=2),
-            encoding="utf-8"
-        )
 
+        config_path = output_dir / f"config.json"
+        config_path.write_text(json.dumps(CONFIG, indent=2))
+        
+        model_path = output_dir / f"model.pt"
         torch.save(
             {
                 "model_state_dict": model.state_dict(),
                 "class_to_idx": class_to_idx,
-                "epoch": EPOCHS,
-                "image_size": IMAGE_SIZE,
+                "epoch": CONFIG.epochs,
+                "image_size": CONFIG.image_size,
             },
             model_path,
         )
         
         print(f"\nGenerating {model_name} figures...")
         
+        y_true, y_pred = collect_predictions(model, test_loader)
+        matrix_path: Path = output_dir / f"confusion_matrix_{test_accuracy}acc_{test_loss}loss.png"
+        score: float = report_results(y_true, y_pred, class_to_idx, matrix_path, model_name)
+        
+        history_path: Path = output_dir / "training_history.json"
+        training_record: dict[str, object] = {
+            "config": CONFIG,
+            "score": score,
+            "history": history,
+        }
+        history_path.write_text(
+            data=json.dumps(training_record, indent=2),
+            encoding="utf-8"
+        )
         plot_training_history(history_path, output_dir, model_name)
         
-        # draw training curves (loss and accuracy)
-        y_true, y_pred = collect_predictions(model, test_loader)
-        report_results(y_true, y_pred, class_to_idx, matrix_path, model_name)
+        best_history_path: Path = BEST_CONFIG_DIR / model_name / "training_history.json"
+        best_score: float | None = None
+        if best_history_path.exists():
+            try:
+                best_score = float(json.loads(best_history_path.read_text(encoding="utf-8"))["score"])
+            except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+                pass
+
+        if best_score is None or score > best_score:
+            best_model_dir: Path = BEST_CONFIG_DIR / model_name
+            if best_model_dir.exists():
+                shutil.rmtree(best_model_dir)
+            shutil.copytree(output_dir, best_model_dir)
+        
         
         print(f"saved everything in: {output_dir}")
-
 
 if __name__ == "__main__":
     main()

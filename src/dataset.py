@@ -15,10 +15,7 @@ import cv2
 
 from sklearn.model_selection import train_test_split
 
-from config import (
-    AUGMENTATION_TRANSFORMS, BATCH_SIZE, RESIZE_PAD_TRANSFORM, TRAIN_RATIO, TRAINING_IMG_LOG_DIR, VAL_RATIO, TEST_RATIO, SEED,
-    AUG_MAX_SHIFT_PERCENT, AUG_MAX_ROTATION_DEG, AUG_ZOOM_RANGE, BALANCE_AUGMENTATION_FACTOR,
-)
+from config import *
 
 def build_class_to_idx(selected_classes: list[str]) -> dict[str, int]:
     if not selected_classes:
@@ -31,20 +28,6 @@ def build_class_to_idx(selected_classes: list[str]) -> dict[str, int]:
         class_to_idx[class_name] = index
 
     return class_to_idx
-
-# Avoid Albumentations' default zero (black) border when translating/rotating.
-RANDOM_AFFINE: A.BasicTransform = A.Affine(
-    p=1.,
-    scale=AUG_ZOOM_RANGE,
-    translate_percent=(-AUG_MAX_SHIFT_PERCENT, AUG_MAX_SHIFT_PERCENT),
-    rotate=(-AUG_MAX_ROTATION_DEG, AUG_MAX_ROTATION_DEG),
-    keep_ratio=False,
-    border_mode=cv2.BORDER_REPLICATE,
-)
-# random shift + rotation + zoom (Barucci et al. 2021, Sec. II-B.3)
-def random_shift_rotate_zoom(image: Image.Image) -> Image.Image:
-    transformed = RANDOM_AFFINE(image=np.asarray(image.convert("RGB")))
-    return Image.fromarray(transformed["image"])
 
 # One training example = a source image + the operations to apply when it is loaded.
 @dataclass(frozen=True)
@@ -89,13 +72,13 @@ class HieroglyphDataset(Dataset):
             img_test_path = img_test_path.with_name(f"{img_test_path.stem}_flip{img_test_path.suffix}")
         
         if sample.jitter:
-            transform = random.choice(AUGMENTATION_TRANSFORMS)
-            image = Image.fromarray(transform(image=np.asarray(image))["image"])
+            transform_name = random.choice(list(AUGMENTATION_TRANSFORMS.keys()))
+            image = Image.fromarray(AUGMENTATION_TRANSFORMS[transform_name](image=np.asarray(image))["image"])
             save_image = True
-            img_test_path = img_test_path.with_name(f"{img_test_path.stem}_jitter{img_test_path.suffix}")
+            img_test_path = img_test_path.with_name(f"{img_test_path.stem}_{transform_name}{img_test_path.suffix}")
 
         # Resize proportionally, then center the image on a black canvas.
-        image = Image.fromarray(RESIZE_PAD_TRANSFORM(image=np.asarray(image))["image"])
+        image = Image.fromarray(CONFIG.getResizePadTransform()(image=np.asarray(image))["image"])
         
         if save_image and not img_test_path.exists():
             TRAINING_IMG_LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -105,17 +88,17 @@ class HieroglyphDataset(Dataset):
 
 
 # Training-set balancing + augmentation, as in the paper:
-#   1. classes with more than  BALANCE_AUGMENTATION_FACTOR * mean  images are randomly downsampled
+#   1. classes with more than  CONFIG.balance_augmentation_factor * mean  images are randomly downsampled
 #   2. classes with fewer than mean images are topped up to the mean with
 #      randomly shifted / rotated / zoomed copies
 #   3. every image of the resulting set also gets a horizontally flipped copy
-def augment_training_samples(samples: list[Sample], seed: int = SEED) -> list[Sample]:
+def augment_training_samples(samples: list[Sample], seed: int = CONFIG.seed) -> list[Sample]:
     samples_by_class: dict[str, list[Sample]] = defaultdict(list)
     for sample in samples:
         samples_by_class[sample.label].append(sample)
 
     mean_count: float = len(samples) / len(samples_by_class)
-    upper_limit: int = int(BALANCE_AUGMENTATION_FACTOR * mean_count)
+    upper_limit: int = int(CONFIG.balance_augmentation_factor * mean_count)
     lower_limit: int = round(mean_count)
 
     rng = random.Random(seed)
@@ -146,7 +129,7 @@ def augment_training_samples(samples: list[Sample], seed: int = SEED) -> list[Sa
     return new_samples
 
 # split the dataset according settings in config.py
-def split_dataset(image_paths: list[Path], labels: list[str], seed: int = SEED,) -> tuple[list[Sample], list[Sample], list[Sample]]:
+def split_dataset(image_paths: list[Path], labels: list[str], seed: int = CONFIG.seed,) -> tuple[list[Sample], list[Sample], list[Sample]]:
     train_paths: list[Path]
     remain_paths: list[Path]
     train_labels: list[str]
@@ -154,13 +137,13 @@ def split_dataset(image_paths: list[Path], labels: list[str], seed: int = SEED,)
 
     train_paths, remain_paths = train_test_split(
         image_paths,
-        test_size = 1 - TRAIN_RATIO,
+        test_size = 1 - CONFIG.train_ratio,
         random_state = seed,
         stratify = labels,
     )
     train_labels, remain_labels = train_test_split(
         labels,
-        test_size = 1 - TRAIN_RATIO,
+        test_size = 1 - CONFIG.train_ratio,
         random_state = seed,
         stratify = labels,
     )
@@ -170,7 +153,7 @@ def split_dataset(image_paths: list[Path], labels: list[str], seed: int = SEED,)
     val_labels: list[Path]
     test_labels: list[Path]
 
-    relative_test_ratio: float = TEST_RATIO / (VAL_RATIO + TEST_RATIO)
+    relative_test_ratio: float = CONFIG.test_ratio / (CONFIG.val_ratio + CONFIG.test_ratio)
 
     val_paths, test_paths = train_test_split(
         remain_paths,
@@ -222,12 +205,12 @@ def read_dataset(image_paths: list[Path], labels: list[str]) -> tuple[dict[str, 
     train_samples, val_samples, test_samples = split_dataset(
         image_paths,
         labels,
-        SEED,
+        CONFIG.seed,
     )
     train_loader: DataLoader = create_dataloader(
         samples=train_samples,
         class_to_idx=class_to_idx,
-        batch_size=BATCH_SIZE,
+        batch_size=CONFIG.batch_size,
         augment=True,
         shuffle=True,
         num_workers=0
@@ -235,7 +218,7 @@ def read_dataset(image_paths: list[Path], labels: list[str]) -> tuple[dict[str, 
     train_eval_loader: DataLoader = create_dataloader(
         samples=train_samples,
         class_to_idx=class_to_idx,
-        batch_size=BATCH_SIZE,
+        batch_size=CONFIG.batch_size,
         augment=False,
         shuffle=False,
         num_workers=0,
@@ -243,7 +226,7 @@ def read_dataset(image_paths: list[Path], labels: list[str]) -> tuple[dict[str, 
     val_loader: DataLoader = create_dataloader(
         samples=val_samples,
         class_to_idx=class_to_idx,
-        batch_size=BATCH_SIZE,
+        batch_size=CONFIG.batch_size,
         augment=False,
         shuffle=False,
         num_workers=0
@@ -251,7 +234,7 @@ def read_dataset(image_paths: list[Path], labels: list[str]) -> tuple[dict[str, 
     test_loader: DataLoader = create_dataloader(
         samples=test_samples,
         class_to_idx=class_to_idx,
-        batch_size=BATCH_SIZE,
+        batch_size=CONFIG.batch_size,
         augment=False,
         shuffle=False,
         num_workers=0

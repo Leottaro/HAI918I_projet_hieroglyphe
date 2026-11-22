@@ -10,7 +10,7 @@ from glyphnet import *
 
 
 def main() -> None:
-    torch.manual_seed(SEED)
+    torch.manual_seed(CONFIG.seed)
     
     df: pd.DataFrame = pd.read_csv(DATA_DIR / "Tableau_imagette_MB.csv")
     df = df[~df["Deno"].str.match(R"^.* \([0-9]+\)$")] # filter to keep single sign images

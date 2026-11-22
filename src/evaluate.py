@@ -127,7 +127,7 @@ def collect_predictions(model: Glyphnet, dataloader: DataLoader) -> tuple[list[i
     return y_true, y_pred
                     
 
-def report_results(y_true: list[int], y_pred: list[int], class_to_idx: dict[str, int], matrix_path: Path, model_name: str):
+def report_results(y_true: list[int], y_pred: list[int], class_to_idx: dict[str, int], matrix_path: Path, model_name: str) -> float:
     # get label index in order
     label_indices: list[int] = sorted(class_to_idx.values())
 
@@ -152,8 +152,24 @@ def report_results(y_true: list[int], y_pred: list[int], class_to_idx: dict[str,
         zero_division=0,
     )
 
-    print (report)
+    report_metrics: dict[str, Any] = classification_report(
+        y_true,
+        y_pred,
+        labels=label_indices,
+        target_names=class_names,
+        output_dict=True,
+        zero_division=0,
+    )
 
+    print(f"Accuracy: {report_metrics['accuracy']:.4f}")
+    for average in ("macro avg", "weighted avg"):
+        metrics = report_metrics[average]
+        print(
+            f"{average.title()} - "
+            f"Precision: {metrics['precision']:.4f}, "
+            f"Recall: {metrics['recall']:.4f}, "
+            f"F1 score: {metrics['f1-score']:.4f}"
+        )
 
     # confusion matrix
     matrix = confusion_matrix(
@@ -190,10 +206,12 @@ def report_results(y_true: list[int], y_pred: list[int], class_to_idx: dict[str,
 
     print(f"Saved confusion matrix to path: {matrix_path}")
 
+    return float(report_metrics["accuracy"])
+
 
 
 def main():
-    torch.manual_seed(SEED)
+    torch.manual_seed(CONFIG.seed)
     
     df: pd.DataFrame = pd.read_csv(DATA_DIR / "Tableau_imagette_MB.csv")
     df = df[~df["Deno"].str.match(R"^.* \([0-9]+\)$")] # filter to keep single sign images
@@ -211,7 +229,7 @@ def main():
         except:
             continue
         
-        output_dir: Path = PROJECT_ROOT / "outputs" / model_name / str(EPOCHS)
+        output_dir: Path = PROJECT_ROOT / "outputs" / model_name / str(CONFIG.epochs)
         model_path = output_dir / "model.pt"
         
         model: Glyphnet
