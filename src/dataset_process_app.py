@@ -1,25 +1,11 @@
 import sys
 from pathlib import Path
 
+import numpy as np
 from PIL import Image
-from PIL.ImageQt import ImageQt, fromqpixmap
-from sam2.modeling.sam2_base import SAM2Base
-from sam2.sam2_image_predictor import SAM2ImagePredictor
-from image_canvas import ImageCanvas
-from pretreatment import *
-from config import SEED
-
-from PySide6.QtCore import (
-    Qt,
-    QRectF,
-    QPointF
-)
-
-from PySide6.QtGui import (
-    QPixmap,
-    QImage,
-)
-
+from PIL.ImageQt import ImageQt
+from PySide6.QtCore import QEvent, QObject, QPointF, Qt
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -32,609 +18,438 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QSpinBox,
     QSplitter,
     QVBoxLayout,
     QWidget,
 )
+from sam2.sam2_image_predictor import SAM2ImagePredictor
 
+from config import SEED
+from dataset_io import append_sample_metadata, find_image_paths, save_processed_image
+from image_canvas import ImageCanvas
+from pretreatment import (
+    DEFAULT_OUTPUT_SIZE,
+    create_sam_predictor,
+    find_prompt_groups,
+    mask_to_box,
+    prepare_processed_image,
+    segment_image,
+)
 
+""" 
+ain window for this interface
+help to explore, label, segement, pretreat and save images
+"""
 class DatasetProcessWindow(QMainWindow):
 
-    def __init__(self) -> None:
+    def __init__(self, sam_device: str = "cpu") -> None:
         super().__init__()
-        self.sam_predictor: SAM2ImagePredictor | None = create_sam_predictor(device_name="cpu")  # initialize sam predictor when open window
+        self._init_state(sam_device)
+        self._build_ui()
+        self._connect_signals()
+        self.statusBar().showMessage("Please select an image or directory")
+
+    def _init_state(self, sam_device: str) -> None:
+        self.sam_device: str = sam_device
+        self.sam_predictor: SAM2ImagePredictor | None = None
+
+        # two rng, one for prompt points, one for gaussin texture
         self.prompt_rng: np.random.Generator = np.random.default_rng(SEED)
-        self.mask: np.ndarray | None = None
+        self.background_rng: np.random.Generator = np.random.default_rng(SEED)
 
-        self.image_paths: list[Path] = []
-        self.current_index: int = -1
-
+        # exploration state for current images in this path
+        self.input_image_paths: list[Path] = []
+        self.current_image_index: int = -1
+        self.current_source_path: Path | None = None
         self.output_directory: Path | None = None
-        self.current_image_path: Path | None = None
 
+        self.segmentation_mask: np.ndarray | None = None
+        # image processed, we save this image
         self.processed_image: Image.Image | None = None
+        # preview of processed image
         self.preview_pixmap: QPixmap | None = None
+        # original image shown currently
+        self.current_original_image: Image.Image | None = None
 
+
+    def _build_ui(self) -> None:
         self.setWindowTitle("Dataset process")
         self.resize(1200, 820)
-
-        # -------- main center widget ------
-        # set a child widget as central widget
         central_widget: QWidget = QWidget(self)
         self.setCentralWidget(central_widget)
         main_layout: QHBoxLayout = QHBoxLayout(central_widget)
-        splitter = QSplitter(Qt.Orientation.Horizontal, central_widget)
-        main_layout.addWidget(splitter)
-
-        # --------left part--------
-        left_widget: QWidget = QWidget()    # left part widget
-        left_layout: QVBoxLayout = QVBoxLayout(left_widget)
-        left_layout.setContentsMargins(0, 0, 0, 0)
-
-        self.source_label: QLabel = QLabel("No image selected",left_widget,)    # show original image label name
-        self.source_label.setWordWrap(True)
-        left_layout.addWidget(self.source_label)
-
-        self.canvas: ImageCanvas = ImageCanvas(left_widget) # initial ImageCanvas, left widget as father
-        left_layout.addWidget(self.canvas, stretch=1)
-
-        hint_label: QLabel = QLabel("hint", left_widget)    # how to use this util
-        hint_label.setWordWrap(True)
-        left_layout.addWidget(hint_label)
-
-        splitter.addWidget(left_widget)
-
-        # ---------right part--------
-        right_widget = QWidget(central_widget)
-        right_widget.setMinimumWidth(320)
-
-        # set right widget vertical layout and style
-        right_layout: QVBoxLayout= QVBoxLayout(right_widget)
-        right_layout.setContentsMargins(8, 0, 0, 0)
-        right_layout.setSpacing(8)
-
-        # oepn image or directory
-        open_layout: QVBoxLayout = QVBoxLayout()
-
-        open_button: QPushButton = QPushButton("Open image", right_widget)
-        self.image_path_label = QLabel("image path:", right_widget)
-        self.image_path_label.setWordWrap(True)
-
-        self.open_directory_button: QPushButton = QPushButton("Open directory", right_widget)
-        self.open_directory_path_label = QLabel("opened directory path:", right_widget)
-        self.open_directory_path_label.setWordWrap(True)
-        
-        self.set_output_directory_button: QPushButton = QPushButton("Set output directory", right_widget)
-        self.output_directory_path_label = QLabel("output directory path:", right_widget)
-        self.output_directory_path_label.setWordWrap(True)
-        
-        open_layout.addWidget(open_button)
-        open_layout.addWidget(self.image_path_label)
-        open_layout.addWidget(self.open_directory_button)
-        open_layout.addWidget(self.open_directory_path_label)
-        open_layout.addWidget(self.set_output_directory_button)
-        open_layout.addWidget(self.output_directory_path_label)
-        
-        right_layout.addLayout(open_layout)
-
-        # operate image buttons
-        tools_layout: QGridLayout = QGridLayout()
-        fit_button: QPushButton = QPushButton("Fit image",right_widget,)
-        delete_button: QPushButton = QPushButton("Delete selected",right_widget,)
-        clear_points_button: QPushButton = QPushButton("Clear prompt points",right_widget,)
-        clear_box_button: QPushButton = QPushButton("Clear box",right_widget,)
-        self.auto_prompts_button: QPushButton = QPushButton("Auto prompts",right_widget,)
-        self.auto_segment_button: QPushButton = QPushButton("Auto segement",right_widget,)
-        tools_layout.addWidget(fit_button, 0, 0)
-        tools_layout.addWidget(delete_button, 0, 1)
-        tools_layout.addWidget(clear_points_button, 1, 0)
-        tools_layout.addWidget(clear_box_button, 1, 1)
-        tools_layout.addWidget(self.auto_prompts_button, 2, 0)
-        tools_layout.addWidget(self.auto_segment_button, 2, 1)
-        right_layout.addLayout(tools_layout)
-
-        # output setting
-        right_layout.addWidget(QLabel("Output size", right_widget))
-        self.output_width: QSpinBox = QSpinBox(right_widget)
-        self.output_height: QSpinBox = QSpinBox(right_widget)
-        for spin_box in (self.output_width, self.output_height):
-            spin_box.setRange(32, 2048)
-            spin_box.setValue(160)
-            spin_box.setSuffix(" px")
-            spin_box.setMinimumHeight(30)
-
-        size_layout: QFormLayout = QFormLayout()
-        size_layout.addRow("Width", self.output_width)
-        size_layout.addRow("Height", self.output_height)
-        right_layout.addLayout(size_layout)
-
-        # preview part
-        right_layout.addWidget(QLabel("Processed preview", right_widget))
-        self.preview_label: QLabel = QLabel("result preview",right_widget,)
-        self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.preview_label.setFrameShape(QFrame.Shape.StyledPanel)
-        self.preview_label.setMinimumSize(160, 160)
-        self.preview_label.setMaximumHeight(220)
-        right_layout.addWidget(self.preview_label)
-        self.update_preview_button: QPushButton = QPushButton("Update preview", right_widget,)
-        right_layout.addWidget(self.update_preview_button)
-
-        # label and filename setting
-        self.label_edit: QLineEdit = QLineEdit(right_widget)
-        self.label_edit.setPlaceholderText("class1 / class2 / class3")
-        self.label_edit.setMinimumWidth(240)
-        self.label_edit.setFixedHeight(35)
-        self.filename_edit: QLineEdit = QLineEdit(right_widget)
-        self.filename_edit.setPlaceholderText("output.png")
-        self.filename_edit.setMinimumWidth(240)
-        self.filename_edit.setFixedHeight(35)
-        metadata_layout: QFormLayout = QFormLayout()
-        metadata_layout.addRow("Class label", self.label_edit)
-        metadata_layout.addRow("Filename", self.filename_edit)
-        right_layout.addLayout(metadata_layout)
-
-        # save result button
-        self.save_button: QPushButton = QPushButton("Save character",right_widget,)
-        right_layout.addWidget(self.save_button)
-
-        right_layout.addStretch(1)
-        self.progress_label: QLabel = QLabel("-- / --",right_widget,)
-        self.previous_button: QPushButton = QPushButton("Previous image", right_widget)
-        self.next_button: QPushButton = QPushButton("Next image",right_widget,)
-        # 尚未加载图片时，两个导航按钮都不可用。
-        self.previous_button.setEnabled(False)
-        self.next_button.setEnabled(False)
-
-        # 上一张与下一张并排显示，进度放在它们上方。
-        navigation_layout: QHBoxLayout = QHBoxLayout()
-        navigation_layout.addWidget(self.previous_button)
-        navigation_layout.addWidget(self.next_button)
-        right_layout.addWidget(self.progress_label)
-        right_layout.addLayout(navigation_layout)
-
-        splitter.addWidget(right_widget)
-
-        # splitter settings
+        splitter: QSplitter = QSplitter(Qt.Orientation.Horizontal, central_widget)
+        splitter.addWidget(self._build_canvas_panel())
+        splitter.addWidget(self._build_controls_panel())
         splitter.setSizes([820, 340])
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 0)
         splitter.setChildrenCollapsible(False)
+        main_layout.addWidget(splitter)
 
-        # connect signal for buttons
-        open_button.clicked.connect(self.open_image)
+    def _build_canvas_panel(self) -> QWidget:
+        panel: QWidget = QWidget()
+        layout: QVBoxLayout = QVBoxLayout(panel)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.source_filename_label: QLabel = QLabel("No image selected", panel)
+        self.source_filename_label.setWordWrap(True)
+        self.image_canvas: ImageCanvas = ImageCanvas(panel)
+        hint_label: QLabel = QLabel(
+            "Shift + left: draw box | Left/right: positive/negative point\n"
+            "Drag a point or border: move | Middle drag: pan | Wheel: zoom",
+            panel,
+        )
+        hint_label.setWordWrap(True)
+        layout.addWidget(self.source_filename_label)
+        layout.addWidget(self.image_canvas, stretch=1)
+        layout.addWidget(hint_label)
+        return panel
+
+    def _build_controls_panel(self) -> QWidget:
+        container: QWidget = QWidget()
+        container.setMinimumWidth(320)
+        container_layout: QVBoxLayout = QVBoxLayout(container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        scroll_area: QScrollArea = QScrollArea(container)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        panel: QWidget = QWidget()
+        layout: QVBoxLayout = QVBoxLayout(panel)
+        layout.setContentsMargins(8, 0, 0, 0)
+        layout.setSpacing(8)
+        self._build_file_controls(layout, panel)
+        self._build_canvas_tools(layout, panel)
+        self._build_size_controls(layout, panel)
+        self._build_preview_controls(layout, panel)
+        self._build_save_controls(layout, panel)
+        layout.addStretch(1)
+        scroll_area.setWidget(panel)
+        container_layout.addWidget(scroll_area, stretch=1)
+        self._build_navigation_controls(container_layout, container)
+        return container
+
+    def _build_file_controls(self, layout: QVBoxLayout, parent: QWidget) -> None:
+        self.open_image_button: QPushButton = QPushButton("Open image", parent)
+        self.source_path_label: QLabel = QLabel("Image path: —", parent)
+        self.open_directory_button: QPushButton = QPushButton("Open directory", parent)
+        self.input_directory_label: QLabel = QLabel("Input directory: —", parent)
+        self.set_output_directory_button: QPushButton = QPushButton("Set output directory", parent)
+        self.output_directory_label: QLabel = QLabel("Output directory: —", parent)
+        for label in (
+            self.source_path_label,
+            self.input_directory_label,
+            self.output_directory_label,
+        ):
+            label.setWordWrap(True)
+        for widget in (
+            self.open_image_button, self.source_path_label,
+            self.open_directory_button, self.input_directory_label,
+            self.set_output_directory_button, self.output_directory_label,
+        ):
+            layout.addWidget(widget)
+
+    def _build_canvas_tools(self, layout: QVBoxLayout, parent: QWidget) -> None:
+        tools_layout: QGridLayout = QGridLayout()
+        self.fit_image_button: QPushButton = QPushButton("Fit image", parent)
+        self.delete_selected_button: QPushButton = QPushButton("Delete selected", parent)
+        self.clear_points_button: QPushButton = QPushButton("Clear prompt points", parent)
+        self.clear_box_button: QPushButton = QPushButton("Clear box", parent)
+        self.auto_prompts_button: QPushButton = QPushButton("Auto prompts", parent)
+        self.segment_button: QPushButton = QPushButton("Auto segment", parent)
+        tools_layout.addWidget(self.fit_image_button, 0, 0)
+        tools_layout.addWidget(self.delete_selected_button, 0, 1)
+        tools_layout.addWidget(self.clear_points_button, 1, 0)
+        tools_layout.addWidget(self.clear_box_button, 1, 1)
+        tools_layout.addWidget(self.auto_prompts_button, 2, 0)
+        tools_layout.addWidget(self.segment_button, 2, 1)
+        layout.addLayout(tools_layout)
+
+    def _build_size_controls(self, layout: QVBoxLayout, parent: QWidget) -> None:
+        layout.addWidget(QLabel("Output size", parent))
+        self.output_width_spinbox: QSpinBox = QSpinBox(parent)
+        self.output_height_spinbox: QSpinBox = QSpinBox(parent)
+        for spinbox, default_value in (
+            (self.output_width_spinbox, DEFAULT_OUTPUT_SIZE[0]),
+            (self.output_height_spinbox, DEFAULT_OUTPUT_SIZE[1]),
+        ):
+            spinbox.setRange(32, 2048)
+            spinbox.setValue(default_value)
+            spinbox.setSuffix(" px")
+            spinbox.setMinimumHeight(30)
+        size_layout: QFormLayout = QFormLayout()
+        size_layout.addRow("Width", self.output_width_spinbox)
+        size_layout.addRow("Height", self.output_height_spinbox)
+        layout.addLayout(size_layout)
+
+    def _build_preview_controls(self, layout: QVBoxLayout, parent: QWidget) -> None:
+        layout.addWidget(QLabel("Processed preview", parent))
+        self.preview_label: QLabel = QLabel("Select a character to preview", parent)
+        self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.preview_label.setFrameShape(QFrame.Shape.StyledPanel)
+        self.preview_label.setMinimumSize(160, 160)
+        self.preview_label.setMaximumHeight(220)
+        self.preview_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.preview_label.installEventFilter(self)
+        self.update_preview_button: QPushButton = QPushButton("Update preview", parent)
+        layout.addWidget(self.preview_label)
+        layout.addWidget(self.update_preview_button)
+
+    def _build_save_controls(self, layout: QVBoxLayout, parent: QWidget) -> None:
+        self.class_label_edit: QLineEdit = QLineEdit(parent)
+        self.class_label_edit.setPlaceholderText("class1 / class2 / class3")
+        self.filename_edit: QLineEdit = QLineEdit(parent)
+        self.filename_edit.setPlaceholderText("output.png")
+        for edit in (self.class_label_edit, self.filename_edit):
+            edit.setMinimumWidth(240)
+            edit.setFixedHeight(35)
+        metadata_layout: QFormLayout = QFormLayout()
+        metadata_layout.addRow("Class label", self.class_label_edit)
+        metadata_layout.addRow("Filename", self.filename_edit)
+        self.save_button: QPushButton = QPushButton("Save character", parent)
+        layout.addLayout(metadata_layout)
+        layout.addWidget(self.save_button)
+
+    def _build_navigation_controls(self, layout: QVBoxLayout, parent: QWidget) -> None:
+        self.progress_label: QLabel = QLabel("-- / --", parent)
+        self.previous_button: QPushButton = QPushButton("Previous image", parent)
+        self.next_button: QPushButton = QPushButton("Next image", parent)
+        self.previous_button.setEnabled(False)
+        self.next_button.setEnabled(False)
+        navigation_layout: QHBoxLayout = QHBoxLayout()
+        navigation_layout.addWidget(self.previous_button)
+        navigation_layout.addWidget(self.next_button)
+        layout.addWidget(self.progress_label)
+        layout.addLayout(navigation_layout)
+
+    def _connect_signals(self) -> None:
+        self.open_image_button.clicked.connect(self.open_image)
         self.open_directory_button.clicked.connect(self.open_directory)
         self.set_output_directory_button.clicked.connect(self.set_output_directory)
-        fit_button.clicked.connect(self.canvas.fit_image)
-        delete_button.clicked.connect(self.canvas.delete_selected_items)
-        clear_points_button.clicked.connect(self.canvas.clear_prompt_points)
-        clear_box_button.clicked.connect(self.canvas.clear_box)
-        self.update_preview_button.clicked.connect(self.update_preview)
+        self.fit_image_button.clicked.connect(self.image_canvas.fit_image)
+        self.delete_selected_button.clicked.connect(self.image_canvas.delete_selected_items)
+        self.clear_points_button.clicked.connect(self.image_canvas.clear_prompt_points)
+        self.clear_box_button.clicked.connect(self.image_canvas.clear_box)
         self.auto_prompts_button.clicked.connect(self.generate_auto_prompts)
-        self.auto_segment_button.clicked.connect(self.segment_current_image)
-        self.previous_button.clicked.connect(self.get_previous_image)
-        self.next_button.clicked.connect(self.get_next_image)
+        self.segment_button.clicked.connect(self.segment_current_image)
+        self.update_preview_button.clicked.connect(self.update_preview)
+        self.previous_button.clicked.connect(self.load_previous_image)
+        self.next_button.clicked.connect(self.load_next_image)
         self.save_button.clicked.connect(self.save_current_result)
 
-        self.statusBar().showMessage("please select a image")
-
-
+    """ image IO and directory"""
     def open_image(self) -> None:
         selected_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Please select image",
-            "",
-            "image (*.png *.jpg *.jpeg *.bmp);;all (*)",
+            self, "Please select image", "", "Images (*.png *.jpg *.jpeg *.bmp);;All (*)"
         )
-
         if not selected_path:
             return
-
         image_path: Path = Path(selected_path)
-
-        if not self.load_source_image(image_path):
-            return
-
-        self.image_paths = [image_path]
-        self.current_index = 0
-
-        self.open_directory_path_label.setText(
-            "No input directory selected"
-        )
-        self.update_navigation()
-
-
-    def load_source_image(self, image_path: Path) -> bool:
-        if not self.canvas.load_image(image_path):
-            return False
-        
-        self.canvas.clear_mask()
-
-        self.mask = None
-        self.processed_image = None
-        self.preview_pixmap = None
-        self.show_preview()
-
-        self.current_image_path = image_path.resolve()
-        self.source_label.setText(image_path.name)
-        self.image_path_label.setText(f"{image_path.stem}.png")
-        self.filename_edit.setText(f"{image_path.stem}.png")
-        self.label_edit.clear()
-
-        self.statusBar().showMessage(f"Opened image: {image_path.name}")
-        return True
+        if self.load_source_image(image_path):
+            self.input_image_paths = [image_path]
+            self.current_image_index = 0
+            self.input_directory_label.setText("No input directory selected")
+            self._update_navigation()
 
     def open_directory(self) -> None:
-        
         selected_path: str = QFileDialog.getExistingDirectory(
-            self,
-            "Please select an input directory",
-            "",
+            self, "Please select an input directory", ""
         )
-
         if not selected_path:
             return
-
         directory: Path = Path(selected_path)
-        supported_suffixes: set[str] = {
-            ".png", ".jpg", ".jpeg", ".bmp",
-        }
-        image_paths: list[Path] = []
-        for path in directory.iterdir():
-            if (
-                path.is_file()
-                and path.suffix.lower() in supported_suffixes
-            ):
-                image_paths.append(path)
-        image_paths.sort(key=lambda path: path.name.casefold())
-
+        try:
+            image_paths: list[Path] = find_image_paths(directory)
+        except OSError as error:
+            QMessageBox.warning(self, "Cannot read directory", str(error))
+            return
         if not image_paths:
+            self.statusBar().showMessage("No supported images found in this directory")
             return
-        
-        if not self.load_source_image(image_paths[0]):
+        if self.load_source_image(image_paths[0]):
+            self.input_image_paths = image_paths
+            self.current_image_index = 0
+            self.input_directory_label.setText(str(directory))
+            self._update_navigation()
+
+    def load_source_image(self, image_path: Path) -> bool:
+        if not self.image_canvas.load_image(image_path):
+            QMessageBox.warning(self, "Failed to open", f"Cannot read image: {image_path.name}")
+            return False
+        self.current_source_path = image_path.resolve()
+        self.segmentation_mask = None
+        self._clear_processed_preview()
+        self.source_filename_label.setText(image_path.name)
+        self.source_path_label.setText(str(self.current_source_path))
+        self.filename_edit.setText(f"{image_path.stem}.png")
+        self.class_label_edit.clear()
+        self.statusBar().showMessage(f"Opened image: {image_path.name}")
+        self.current_original_image = self.image_canvas.get_original_image()
+        return True
+
+    def load_previous_image(self) -> None:
+        self._load_image_at_index(self.current_image_index - 1)
+
+    def load_next_image(self) -> None:
+        self._load_image_at_index(self.current_image_index + 1)
+
+    def _load_image_at_index(self, index: int) -> None:
+        if not 0 <= index < len(self.input_image_paths):
             return
+        if self.load_source_image(self.input_image_paths[index]):
+            self.current_image_index = index
+            self._update_navigation()
 
-        self.image_paths = image_paths
-        self.current_index = 0
-
-        self.open_directory_path_label.setText(str(directory))
-        self.update_navigation()
-
+    def _update_navigation(self) -> None:
+        total: int = len(self.input_image_paths)
+        self.progress_label.setText(
+            f"{self.current_image_index + 1} / {total}" if total else "-- / --"
+        )
+        self.previous_button.setEnabled(0 < self.current_image_index < total)
+        self.next_button.setEnabled(0 <= self.current_image_index < total - 1)
 
     def set_output_directory(self) -> None:
         selected_path: str = QFileDialog.getExistingDirectory(
-            self,
-            "Please select an output directory",
-            "",
+            self, "Please select an output directory", ""
         )
+        if selected_path:
+            self.output_directory = Path(selected_path).resolve()
+            self.output_directory_label.setText(str(self.output_directory))
 
-        if not selected_path:
-            return
-
-        self.output_directory = Path(selected_path).resolve()
-        self.output_directory_path_label.setText(self.output_directory) 
-
-
-    def get_previous_image(self) -> None:
-        # 没有图片或已经位于第一张时，不允许使用负索引回到末尾。
-        if not self.image_paths or self.current_index <= 0:
-            return
-
-        previous_index: int = self.current_index - 1
-        previous_path: Path = self.image_paths[previous_index]
-
-        # 复用现有加载流程，成功后才更新索引和导航按钮。
-        if not self.load_source_image(previous_path):
-            return
-
-        self.current_index = previous_index
-        self.update_navigation()
-
-
-    def get_next_image(self) -> None:
-        if not self.image_paths:
-            return
-        next_index: int = self.current_index + 1
-        if next_index >= len(self.image_paths):
-            self.statusBar().showMessage("Already at the last image")
-            return
-
-        next_path: Path = self.image_paths[next_index]
-        if not self.load_source_image(next_path):
-            return
-        
-        self.current_index = next_index
-        self.update_navigation()
-
-
-    def update_navigation(self) -> None:
-        total: int = len(self.image_paths)
-
-        self.progress_label.setText(
-            f"{self.current_index + 1} / {total}"
-        )
-
-        # 第一张没有上一张；仅有一张图片时同样禁用。
-        has_previous: bool = 0 < self.current_index < total
-        self.previous_button.setEnabled(has_previous)
-
-        has_next: bool = (
-            0 <= self.current_index < total - 1
-        )
-
-        self.next_button.setEnabled(has_next)
-
-
-    # update preview image
-    def update_preview(self) -> None:
-        crop_box: tuple[int, int, int, int] | None = self.canvas.get_corp_box()
-
-        if crop_box is None:
-            self.processed_image = None
-            self.preview_pixmap = None
-            self.show_preview()
-            return
-
-        original: Image.Image = fromqpixmap(self.canvas.image_item.pixmap()).convert("RGB")
-
-        self.processed_image = self.prepare_processed_image(original)
-        qt_image: QImage = ImageQt(self.processed_image)
-        self.preview_pixmap = QPixmap.fromImage(qt_image)
-
-        self.show_preview()
-
-    # show preview label content
-    def show_preview(self) -> None:
-        if self.preview_pixmap is None:
-            self.preview_label.clear()
-            self.preview_label.setText(
-                "Select a character to preview"
-            )
-            return
-
-        self.preview_label.setPixmap(
-            self.preview_pixmap.scaled(
-                self.preview_label.contentsRect().size(),
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-        )
-
-
-    # process image automatically by prompts points and selection box
-    def prepare_processed_image(
-            self,
-            image: Image.Image,
-        ) -> Image.Image:
-
-            target_width, target_height = (
-                self.output_width.value(),
-                self.output_height.value(),
-            )
-
-            mask_box: tuple[int, int, int, int] | None = self.canvas.get_corp_box()
-            crop: Image.Image = image.convert("RGB").crop(mask_box)
-
-            scale: float = min(
-                target_width / crop.width,
-                target_height / crop.height,
-            )
-
-            resized_width: int = min(
-                target_width,
-                max(1, round(crop.width * scale)),
-            )
-            resized_height: int = min(
-                target_height,
-                max(1, round(crop.height * scale)),
-            )
-
-            resized_image: Image.Image = crop.resize(
-                (resized_width, resized_height),
-                resample=Image.Resampling.LANCZOS,
-            )
-
-            # get statistic information
-            pixels: np.ndarray = np.array(crop)
-
-            border_pixels: np.ndarray = np.concatenate(
-                (
-                    pixels[0, :, :],     # 上边
-                    pixels[-1, :, :],    # 下边
-                    pixels[:, 0, :],     # 左边
-                    pixels[:, -1, :],    # 右边
-                ),
-                axis=0,
-            )
-
-            background_color: np.ndarray = np.median(
-                border_pixels,
-                axis=0,
-            )
-
-            # generate gaussian background
-            noise: np.ndarray = self.prompt_rng.normal(
-                loc=0.0,
-                scale=6.0,
-                size=(target_height, target_width, 1),
-            )
-
-            background_pixels: np.ndarray = np.clip(
-                background_color + noise,
-                0,
-                255,
-            ).astype(np.uint8)
-
-            result: Image.Image = Image.fromarray(background_pixels)
-
-            offset_x: int = (target_width - resized_width) // 2
-            offset_y: int = (target_height - resized_height) // 2
-
-            result.paste(resized_image, (offset_x, offset_y))
-
-            return result
-
-
-    # generate prompt points automatically
+    """ prompt points and SAM"""
     def generate_auto_prompts(self) -> None:
-        pixmap: QPixmap = self.canvas.image_item.pixmap()
-        if pixmap.isNull():
+        image: Image.Image | None = self.image_canvas.get_original_image()
+        if image is None:
             self.statusBar().showMessage("Please open an image first")
             return
-        rgb_image: Image.Image = fromqpixmap(pixmap).convert("RGB") # convert to pillow image
-        rgb: np.ndarray = np.array(rgb_image)   # convert to np array
-
-        groups: list[np.ndarray] = find_prompt_groups(rgb,self.prompt_rng,)[1]    # get first group
-
-        self.canvas.clear_prompt_points()
-
+        rgb: np.ndarray = np.array(image)
+        groups: list[np.ndarray] = find_prompt_groups(rgb, self.prompt_rng)[1]
+        self.image_canvas.clear_prompt_points()
         for points in groups:
             for x, y in points:
-                position: QPointF = QPointF(float(x), float(y))
-                self.canvas.add_prompt(position, label=1)
-
-        count: int = len(self.canvas.prompt_items)
+                self.image_canvas.add_prompt(QPointF(float(x), float(y)), label=1)
         self.statusBar().showMessage(
-            f"Generated {count} positive candidate prompts"
+            f"Generated {len(self.image_canvas.prompt_items)} positive candidate prompts"
         )
 
-
-    # segement current image and get mask as return
     def segment_current_image(self) -> None:
-        self.mask = None
-        pixmap: QPixmap = self.canvas.image_item.pixmap()
-        if pixmap.isNull():
+        image: Image.Image | None = self.image_canvas.get_original_image()
+        if image is None:
             self.statusBar().showMessage("Please open an image first")
-            return None
-        image: Image.Image = fromqpixmap(pixmap).convert("RGB")
-        rgb: np.ndarray = np.array(image)   # convert to np array
-
-        point_coords: np.ndarray
-        point_labels: np.ndarray
-        point_coords, point_labels = self.canvas.get_prompts()
-        box: tuple[int, int, int, int] | None = (self.canvas.get_corp_box())
-
+            return
+        point_coords, point_labels = self.image_canvas.get_prompts()
+        box: tuple[int, int, int, int] | None = self.image_canvas.get_crop_box()
         if len(point_coords) == 0 and box is None:
             self.statusBar().showMessage("Please add points or a box")
-            return None
-        
-        self.mask: np.ndarray = segment_image(
-            predictor=self.sam_predictor,
-            rgb=rgb,
-            point_coords=point_coords,
-            point_labels=point_labels,
-            box=box,
-        )
+            return
+        try:
+            if self.sam_predictor is None:
+                self.sam_predictor = create_sam_predictor(device_name=self.sam_device)
+            mask: np.ndarray = segment_image(
+                predictor=self.sam_predictor,
+                rgb=np.array(image),
+                point_coords=point_coords,
+                point_labels=point_labels,
+                box=box,
+            )
+        except (OSError, RuntimeError, ValueError) as error:
+            QMessageBox.warning(self, "Segmentation failed", str(error))
+            return
+        self.segmentation_mask = mask
+        self.image_canvas.show_segmentation(mask, mask_to_box(mask))
+        if not mask.any():
+            self.statusBar().showMessage("No foreground detected")
 
-        mask_box: tuple[int, int, int, int] | None = mask_to_box(self.mask)
-        self.canvas.show_segmentation(self.mask, mask_box)   # update mask area
+    def update_preview(self) -> None:
+        crop_box: tuple[int, int, int, int] | None = self.image_canvas.get_crop_box()
+        image: Image.Image | None = self.image_canvas.get_original_image()
+        if image is None:
+            QMessageBox.warning(self, "Current image is null")
+            self._clear_processed_preview()
+            return
+        
+        if crop_box is None:
+            self.processed_image = self.current_original_image
+        else:
+            try:
+                output_size: tuple[int, int] = (self.output_width_spinbox.value(), self.output_height_spinbox.value())
+                self.processed_image = prepare_processed_image(
+                    image, crop_box, output_size, self.background_rng
+                )
+            except (OSError, ValueError) as error:
+                self._clear_processed_preview()
+                QMessageBox.warning(self, "Processing failed", str(error))
+                return
+
+        self.preview_pixmap = QPixmap.fromImage(ImageQt(self.processed_image))
+        self._show_preview()
+
+    def _clear_processed_preview(self) -> None:
+        self.processed_image = None
+        self.preview_pixmap = None
+        self._show_preview()
+
+    def _show_preview(self) -> None:
+        if self.preview_pixmap is None:
+            self.preview_label.clear()
+            self.preview_label.setText("Select a character to preview")
+            return
+        self.preview_label.setPixmap(self.preview_pixmap.scaled(
+            self.preview_label.contentsRect().size(),
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        ))
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        if watched is self.preview_label and event.type() == QEvent.Type.Resize:
+            self._show_preview()
+        return super().eventFilter(watched, event)
+
+    
 
     def save_current_result(self) -> None:
-        # no image processed
-        if (
-            self.processed_image is None
-            or self.current_image_path is None
-        ):
-            self.statusBar().showMessage(
-                "Please generate a processed preview first"
-            )
+        if (self.processed_image is None or self.current_source_path is None) and self.current_original_image is None:
+            self.statusBar().showMessage("Please generate a processed preview first")
             return
-
-        # no output directory selected
+        elif (self.processed_image is None) and (self.current_original_image is not None):
+            self.processed_image = self.current_original_image  # 设置当前处理后的图片为原图
         if self.output_directory is None:
-            self.statusBar().showMessage(
-                "Please select an output directory"
-            )
+            self.statusBar().showMessage("Please select an output directory")
             return
-
         filename: str = self.filename_edit.text().strip()
-
-        if (
-            not filename
-            or filename in {".", ".."}
-            or "/" in filename
-            or "\\" in filename
-        ):
-            self.statusBar().showMessage(
-                "Please enter a valid filename without a directory"
-            )
-            return
-
-        base_path: Path = (
-            self.output_directory / filename
-        ).with_suffix(".png")
-        output_path: Path = base_path
-        number: int = 1
-
-        # 先检查候选路径，存在重名时依次尝试 _001、_002 等编号。
-        # 始终基于原始名称生成，避免编号不断嵌套。
-        while output_path.exists():
-            output_path = base_path.with_name(
-                f"{base_path.stem}_{number:03d}{base_path.suffix}"
-            )
-            number += 1
-
         try:
-            # 保留独占创建，确保实际写入时也不会覆盖已有文件。
-            with output_path.open("xb") as file:
-                self.processed_image.save(file, format="PNG")
-        except FileExistsError:
-            self.statusBar().showMessage(
-                f"Filename already exists: {output_path.name}"
+            output_path: Path = save_processed_image(
+                self.processed_image, self.output_directory, filename
             )
+        except ValueError as error:
+            self.statusBar().showMessage(str(error))
             return
         except OSError as error:
-            QMessageBox.warning(
-                self,
-                "Save failed",
-                str(error),
-            )
+            QMessageBox.warning(self, "Save failed", str(error))
             return
-
-        # record relations with original dataset
-        record: dict[str, object] = {
-            "output_file": output_path.name,
-            "source_file": self.current_image_path.name,
-            "label": self.label_edit.text().strip() or None,
-            "image_size": list(self.processed_image.size),
-        }
-
-        metadata_path: Path = (
-            self.output_directory / "metadata.jsonl"
-        )
-
         try:
-             with metadata_path.open("a", encoding="utf-8") as file:
-                 file.write(
-                    json.dumps(record, ensure_ascii=False) + "\n"
-                )
+            append_sample_metadata(
+                self.output_directory, output_path, self.current_source_path,
+                self.class_label_edit.text().strip() or None, self.processed_image.size,
+            )
         except OSError as error:
             QMessageBox.warning(
-                self,
-                "Metadata save failed",
-                f"Image saved to:\n{output_path}\n\n"
-                f"Could not record its metadata:\n{error}",
+                self, "Metadata save failed",
+                f"Image saved to:\n{output_path}\n\nCould not record its metadata:\n{error}",
             )
             return
-        # 连续保存时保留基础名称；状态栏和元数据使用实际保存名称。
-        self.filename_edit.setText(base_path.name)
-        self.statusBar().showMessage(
-            f"Saved: {output_path.name}"
-        )
-
+        self.filename_edit.setText(Path(filename).with_suffix(".png").name)
+        self.statusBar().showMessage(f"Saved: {output_path.name}")
 
 
 def main() -> None:
     app: QApplication = QApplication(sys.argv)
-
     window: DatasetProcessWindow = DatasetProcessWindow()
     window.show()
-
     sys.exit(app.exec())
 
 
 if __name__ == "__main__":
     main()
-
-
