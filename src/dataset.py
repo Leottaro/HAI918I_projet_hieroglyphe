@@ -89,7 +89,7 @@ def augment_training_samples(samples: list[Sample]) -> list[Sample]:
         samples_by_class[sample.label].append(sample)
 
     biggest_class_count: int = 0
-    for _, samples in samples_by_class:
+    for samples in samples_by_class.values():
         if biggest_class_count < len(samples):
             biggest_class_count = len(samples)
 
@@ -184,7 +184,6 @@ def read_dataset(image_paths: list[Path], labels: list[str]) -> tuple[dict[str, 
     train_samples, val_samples, test_samples = split_dataset(
         image_paths,
         labels,
-        CONFIG.seed,
     )
     train_loader: DataLoader = create_dataloader(
         samples=train_samples,

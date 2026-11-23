@@ -500,5 +500,5 @@ pip-selfcheck.json
 
 /data/
 /Training_Image_DAO_Sith/
-/outputs/*
-!/outputs/best
+/outputs*/*
+!/outputs*/best

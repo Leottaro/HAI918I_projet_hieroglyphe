@@ -96,6 +96,10 @@ def train_epochs(train_loader, clean_train_loader, val_loader, model, loss_fn, o
         })
 
         print(f"\tVal loss: {val_loss:.4f}, accuracy: {val_accuracy:.2%}")
+        
+        if val_accuracy == 1.0 and val_loss == 0.0:
+            print(f"\tPerfect model, skipping other epoch...")
+            break
 
     return history
 
