@@ -5,13 +5,9 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageOps
-import pandas as pd
 from torch import Tensor
-import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import ToTensor
-import albumentations as A
-import cv2
 
 from sklearn.model_selection import train_test_split
 
@@ -34,13 +30,13 @@ def build_class_to_idx(selected_classes: list[str]) -> dict[str, int]:
 class Sample:
     path: Path
     label: str
-    jitter: bool = False  # random shift / rotation / zoom
-    flip: bool = False    # horizontal mirror
+    augment: bool = False
+    flip: bool = False
 
     def __lt__(self, other: object) -> bool:
         if not isinstance(other, Sample):
             return NotImplemented
-        return (self.path, self.label, self.jitter, self.flip) < (other.path, other.label, other.jitter, other.flip)
+        return (self.path, self.label, self.augment, self.flip) < (other.path, other.label, other.augment, other.flip)
 
 # custom dataset class for pytorch
 class HieroglyphDataset(Dataset):
@@ -65,13 +61,13 @@ class HieroglyphDataset(Dataset):
         
         with Image.open(sample.path) as file:
             image = file.convert("L")
-      
+            
         if sample.flip:
             image = ImageOps.mirror(image)
             save_image = True
             img_test_path = img_test_path.with_name(f"{img_test_path.stem}_flip{img_test_path.suffix}")
         
-        if sample.jitter:
+        if sample.augment:
             transform_name = random.choice(list(AUGMENTATION_TRANSFORMS.keys()))
             image = Image.fromarray(AUGMENTATION_TRANSFORMS[transform_name](image=np.asarray(image))["image"])
             save_image = True
@@ -87,49 +83,32 @@ class HieroglyphDataset(Dataset):
         return self.to_tensor(image), self.class_to_idx[sample.label]
 
 
-# Training-set balancing + augmentation, as in the paper:
-#   1. classes with more than  CONFIG.balance_augmentation_factor * mean  images are randomly downsampled
-#   2. classes with fewer than mean images are topped up to the mean with
-#      randomly shifted / rotated / zoomed copies
-#   3. every image of the resulting set also gets a horizontally flipped copy
-def augment_training_samples(samples: list[Sample], seed: int = CONFIG.seed) -> list[Sample]:
+def augment_training_samples(samples: list[Sample]) -> list[Sample]:
     samples_by_class: dict[str, list[Sample]] = defaultdict(list)
     for sample in samples:
         samples_by_class[sample.label].append(sample)
 
-    mean_count: float = len(samples) / len(samples_by_class)
-    upper_limit: int = int(CONFIG.balance_augmentation_factor * mean_count)
-    lower_limit: int = round(mean_count)
+    biggest_class_count: int = 0
+    for _, samples in samples_by_class:
+        if biggest_class_count < len(samples):
+            biggest_class_count = len(samples)
 
-    rng = random.Random(seed)
     new_samples: list[Sample] = []
-
     for class_name in sorted(samples_by_class):
         class_samples: list[Sample] = sorted(samples_by_class[class_name])
-
-        if len(class_samples) > upper_limit:
-            class_samples = rng.sample(class_samples, upper_limit)
-
         new_samples.extend(Sample(sample.path, sample.label) for sample in class_samples)
         
-        # cycle over the sources so that each one is reused about equally often
-        missing: int = lower_limit - len(class_samples)
-        for i in range(max(missing, 0)):
+        for i in range(len(class_samples), biggest_class_count):
             sample = class_samples[i % len(class_samples)]
-            new_samples.append(Sample(sample.path, sample.label, jitter=True))
+            new_samples.append(Sample(sample.path, sample.label, augment=True))
 
-    num_balanced: int = len(new_samples)
     new_samples.extend(replace(sample, flip=True) for sample in list(new_samples))
-
-    print(
-        f"Training set: {len(samples)} images -> {num_balanced} after balancing "
-        f"(cap {upper_limit}, floor {lower_limit}) -> {len(new_samples)} after horizontal flip"
-    )
+    print(f"Training set: {len(samples)} images -> {len(new_samples)} after augmentation")
 
     return new_samples
 
 # split the dataset according settings in config.py
-def split_dataset(image_paths: list[Path], labels: list[str], seed: int = CONFIG.seed,) -> tuple[list[Sample], list[Sample], list[Sample]]:
+def split_dataset(image_paths: list[Path], labels: list[str]) -> tuple[list[Sample], list[Sample], list[Sample]]:
     train_paths: list[Path]
     remain_paths: list[Path]
     train_labels: list[str]
@@ -138,13 +117,13 @@ def split_dataset(image_paths: list[Path], labels: list[str], seed: int = CONFIG
     train_paths, remain_paths = train_test_split(
         image_paths,
         test_size = 1 - CONFIG.train_ratio,
-        random_state = seed,
+        random_state = CONFIG.seed,
         stratify = labels,
     )
     train_labels, remain_labels = train_test_split(
         labels,
         test_size = 1 - CONFIG.train_ratio,
-        random_state = seed,
+        random_state = CONFIG.seed,
         stratify = labels,
     )
 
@@ -158,13 +137,13 @@ def split_dataset(image_paths: list[Path], labels: list[str], seed: int = CONFIG
     val_paths, test_paths = train_test_split(
         remain_paths,
         test_size = relative_test_ratio,
-        random_state = seed,
+        random_state = CONFIG.seed,
         stratify = remain_labels,
     )
     val_labels, test_labels = train_test_split(
         remain_labels,
         test_size = relative_test_ratio,
-        random_state = seed,
+        random_state = CONFIG.seed,
         stratify = remain_labels,
     )
     
