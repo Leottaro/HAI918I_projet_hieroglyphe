@@ -1,0 +1,24 @@
+原表：Tableau_imagette_MB.csv
+下面的顺序与原表一致。示例值保留原表的写法，便于搜索与核对。
+
+Deno — 样本名称或编号。代码通常用这一列拼出图片文件名，例如 CK_140 (1) 对应 CK_140 (1).png。
+Type_monu — 字形所在的载体类型。paroi = 壁面，Statuette = 小雕像。
+Mains — 字形中是否表现出手部。
+Forme_main — 手部的整体形状。réaliste = 写实形，pince = 钳形，boule = 圆团形，coupe = 杯形，cercle = 环形。原表也使用 non。
+Doigts — 字形中是否表现出手指。
+Doigts_indiv — 手指是否逐根画出或刻出，可以分辨单根。
+Espacement doigts — 手指之间是否留有间隔。
+Nombre doigts — 手指的数量。表中有 3、4、5，也有 non、NA 和空白；non 保留为原表类别，不换算成数字 0。
+Symétrie — 字形是否左右对称。
+Pouces_distingues — 拇指是否能和其他手指区别开来。
+Angle des coudes — 肘部弯折处的角度。droit = 直角，aïgus（原表拼写）= 锐角，obtus = 钝角。
+Type de jointure — 字形接合部的形态。plate = 平直形，muscle = 肌肉形，triangle = 三角形，trait = 线条形，demi_cercle = 半圆形，séparation = 分离。muscle_traits 和 muscle+ 是原表的细分编码，可请制表人提供具体定义或例图。
+Technique — 制作技法。creux = 阴刻／凹刻，relief = 浮雕，peint = 绘制。
+Pavois — 字形是否带有用于承托徽记的仪仗标杆。可参考 Gardiner D29，即双臂字形 D28 与标杆 R12 的组合。表格的具体判定范围以制表人的标注标准为准。
+Couleur — 颜色。rouge = 红色，noir = 黑色。原表也使用 non，具体标注口径可向制表人确认。
+Bracelets — 腕部是否表现出手镯或腕饰。
+Combinaison — 与其他符号的组合情况。原表取值包括 non 和 Sw；Sw 保留原标记，具体指哪个符号可向制表人确认。
+
+常见取值
+oui = 是／有；non = 否／无，具体含义取决于列。
+空白、NA = 读取代码视为缺失值。原表中 NA 的具体含义（未知、不可判读或不适用）可向制表人确认。
