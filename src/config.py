@@ -28,16 +28,6 @@ AUGMENTATION_TRANSFORMS = {
         A.GaussNoise(p=1., std_range=(0.025, 0.025)),
         A.RandomBrightnessContrast(p=1., brightness_limit=(-0.25, 0.25), contrast_limit=(-0.25, 0.25)),
     ]),
-    # "affine": A.Affine(
-    #     p=1.,
-    #     scale=(0.95, 1.05),
-    #     translate_percent=(-0.1, 0.1),
-    #     rotate=(-10.0, 10.0),
-    #     keep_ratio=False,
-    #     border_mode=cv2.BORDER_REPLICATE,
-    # ),
-    # "noise": A.GaussNoise(p=1., std_range=(0.025, 0.025)),
-    # "brightness_contrast": A.RandomBrightnessContrast(p=1., brightness_limit=(-0.25, 0.25), contrast_limit=(-0.25, 0.25)),
 }
 
 class Config(dict):
@@ -47,9 +37,10 @@ class Config(dict):
     test_ratio: float = 0.15
     
     image_size: int = 128
-    epochs: int = 32
+    epochs: int = 64
     batch_size: int = 32
     learning_rate: float = 1e-4
+    max_augmentation_percent: float = 1.
     
     def __init__(self) -> None:
         super().__init__(
@@ -60,6 +51,7 @@ class Config(dict):
             image_size = self.image_size,
             batch_size = self.batch_size,
             learning_rate = self.learning_rate,
+            max_augmentation_percent = self.max_augmentation_percent,
             epochs = self.epochs
         )
 

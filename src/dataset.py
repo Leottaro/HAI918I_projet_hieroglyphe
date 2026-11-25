@@ -1,3 +1,4 @@
+import math
 import random
 from collections import Counter, defaultdict
 from dataclasses import dataclass, replace
@@ -88,24 +89,29 @@ def augment_training_samples(samples: list[Sample]) -> list[Sample]:
     for sample in samples:
         samples_by_class[sample.label].append(sample)
 
-    biggest_class_count: int = 0
+    max_class_count: int = 0
+    min_class_count: int = math.inf
     for samples in samples_by_class.values():
-        if biggest_class_count < len(samples):
-            biggest_class_count = len(samples)
+        count = len(samples)
+        max_class_count = max(max_class_count, count)
+        min_class_count = min(min_class_count, count)
+    final_class_count = int(min_class_count + (max_class_count - min_class_count) * CONFIG.max_augmentation_percent)
 
-    new_samples: list[Sample] = []
+    augment_samples: list[Sample] = []
     for class_name in sorted(samples_by_class):
-        class_samples: list[Sample] = sorted(samples_by_class[class_name])
-        new_samples.extend(Sample(sample.path, sample.label) for sample in class_samples)
-        
-        for i in range(len(class_samples), biggest_class_count):
-            sample = class_samples[i % len(class_samples)]
-            new_samples.append(Sample(sample.path, sample.label, augment=True))
+        augment_samples.extend(sorted(samples_by_class[class_name]))
+        current_class_count = len(samples_by_class[class_name])
+        if current_class_count > final_class_count:
+            augment_samples = augment_samples[:final_class_count]
+        elif current_class_count < final_class_count:
+            for i in range(current_class_count, final_class_count):
+                sample = samples_by_class[class_name][i % current_class_count]
+                augment_samples.append(Sample(sample.path, sample.label, augment=True))
 
-    new_samples.extend(replace(sample, flip=True) for sample in list(new_samples))
-    print(f"Training set: {len(samples)} images -> {len(new_samples)} after augmentation")
-
-    return new_samples
+    augment_flip_samples: list[Sample] = list(augment_samples)
+    augment_flip_samples.extend(Sample(sample.path, sample.label, augment=sample.augment, flip=True) for sample in list(augment_flip_samples))
+    
+    return augment_flip_samples
 
 # split the dataset according settings in config.py
 def split_dataset(image_paths: list[Path], labels: list[str]) -> tuple[list[Sample], list[Sample], list[Sample]]:
@@ -180,18 +186,6 @@ def read_dataset(image_paths: list[Path], labels: list[str]) -> tuple[dict[str, 
         label_counts[label] += 1
     
     class_to_idx: dict[str, int] = build_class_to_idx(labels)
-    
-    too_small_classes = set([label for label, count in label_counts.items() if count < 6])
-    if len(too_small_classes) > 0:
-        print(f"Warning: classes {too_small_classes} have less than 6 items, skipping those...")
-        new_image_paths: list[Path] = []
-        new_labels: list[str] = []
-        for i in range(len(image_paths)):
-            if labels[i] not in too_small_classes:
-                new_image_paths.append(image_paths[i])
-                new_labels.append(labels[i])
-        image_paths = new_image_paths
-        labels = new_labels
     
     train_samples, val_samples, test_samples = split_dataset(
         image_paths,

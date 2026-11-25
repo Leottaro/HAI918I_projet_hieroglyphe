@@ -92,9 +92,9 @@ KIU_2829,paroi,oui,pince,non,non,non,non,oui,oui,droit,muscle,relief,oui,non,non
 KIU_2855,paroi,oui,réaliste,non,non,non,non,oui,oui,droit,muscle+,relief,oui,non,non,non
 KIU_2942,,,,,,,,,,,,,,,,
 KIU_2967,,,,,,,,,,,,,,,,
-KIU_2995 (1),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,relief,non,NA,non,non
-KIU_2995 (2),paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,relief,non,NA,non,non
-KIU_2995 (3),paroi,oui,pince,non,non,non,non,NA,oui,NA,NA,relief,non,NA,non,non
+KIU_2995_1,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,relief,non,NA,non,non
+KIU_2995_2,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,relief,non,NA,non,non
+KIU_2995_3,paroi,oui,pince,non,non,non,non,NA,oui,NA,NA,relief,non,NA,non,non
 KIU_3053_1,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non
 KIU_3053_2,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non
 KIU_3053_3,paroi,oui,pince,non,non,non,non,oui,oui,droit,plate,creux,non,non,non,non

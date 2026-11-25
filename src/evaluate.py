@@ -11,7 +11,6 @@ from sklearn.metrics import classification_report, confusion_matrix, ConfusionMa
 
 from config import *
 from dataset import *
-
 from glyphnet import *
 
 
@@ -33,7 +32,7 @@ def load_model(model_path: Path) -> tuple[Glyphnet, dict[str, int]]:
     return model, class_to_idx
 
 
-def plot_training_history(history_path: Path, output_dir: Path, model_name: str):
+def plot_training_history(history_path: Path, output_dir: Path, model_name: str, verbose: bool):
     # read history
     record: dict[str, any] = json.loads(history_path.read_text(encoding="utf-8"))
 
@@ -103,7 +102,8 @@ def plot_training_history(history_path: Path, output_dir: Path, model_name: str)
     figure.savefig(image_path, dpi=180)
     plt.close(figure)
 
-    print(f"Saved curves to path: {image_path}")
+    if verbose: 
+        print(f"Saved curves to path: {image_path}")
 
 
 def collect_predictions(model: Glyphnet, dataloader: DataLoader) -> tuple[list[int], list[int]]:
@@ -128,7 +128,7 @@ def collect_predictions(model: Glyphnet, dataloader: DataLoader) -> tuple[list[i
     return y_true, y_pred
                     
 
-def report_results(y_true: list[int], y_pred: list[int], class_to_idx: dict[str, int], matrix_path: Path, model_name: str) -> float:
+def report_results(y_true: list[int], y_pred: list[int], class_to_idx: dict[str, int], matrix_path: Path, model_name: str, verbose: bool) -> dict[str, Any]:
     # get label index in order
     label_indices: list[int] = sorted(class_to_idx.values())
 
@@ -152,6 +152,7 @@ def report_results(y_true: list[int], y_pred: list[int], class_to_idx: dict[str,
         digits=4,
         zero_division=0,
     )
+    print("Report: ", report)
 
     report_metrics: dict[str, Any] = classification_report(
         y_true,
@@ -161,22 +162,6 @@ def report_results(y_true: list[int], y_pred: list[int], class_to_idx: dict[str,
         output_dict=True,
         zero_division=0,
     )
-
-    macro_f1 = 0
-    for c in report_metrics:
-        macro_f1 += c["f1-score"]
-    macro_f1 /= len(class_to_idx.keys())
-
-    print(f"Macro F1: {macro_f1:.4f}")
-    print(f"Accuracy: {report_metrics['accuracy']:.4f}")
-    for average in ("macro avg", "weighted avg"):
-        metrics = report_metrics[average]
-        print(
-            f"{average.title()} - "
-            f"Precision: {metrics['precision']:.4f}, "
-            f"Recall: {metrics['recall']:.4f}, "
-            f"F1 score: {metrics['f1-score']:.4f}"
-        )
 
     # confusion matrix
     matrix = confusion_matrix(
@@ -211,9 +196,10 @@ def report_results(y_true: list[int], y_pred: list[int], class_to_idx: dict[str,
     figure.savefig(matrix_path, dpi=180)
     plt.close(figure)
 
-    print(f"Saved confusion matrix to path: {matrix_path}")
+    if verbose:
+        print(f"Saved confusion matrix to path: {matrix_path}")
 
-    return macro_f1
+    return {k:v for k,v in report_metrics.items() if k not in class_to_idx}
 
 
 
