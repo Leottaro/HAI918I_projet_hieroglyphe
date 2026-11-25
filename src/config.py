@@ -10,9 +10,9 @@ import cv2
 DEVICE = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
 
 PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
-DATA_DIR: Path = PROJECT_ROOT / "Image_DAO_Sith"
+DATA_DIR: Path = PROJECT_ROOT / "Image_DAO_Sith_Treated"
 TRAINING_IMG_LOG_DIR: Path = PROJECT_ROOT / "Training_Image_DAO_Sith"
-OUTPUT_DIR = PROJECT_ROOT / "outputs_aug_boost"
+OUTPUT_DIR = PROJECT_ROOT / "outputs"
 BEST_CONFIG_DIR = OUTPUT_DIR / "best"
 
 AUGMENTATION_TRANSFORMS = {
@@ -28,16 +28,16 @@ AUGMENTATION_TRANSFORMS = {
         A.GaussNoise(p=1., std_range=(0.025, 0.025)),
         A.RandomBrightnessContrast(p=1., brightness_limit=(-0.25, 0.25), contrast_limit=(-0.25, 0.25)),
     ]),
-    "affine": A.Affine(
-        p=1.,
-        scale=(0.95, 1.05),
-        translate_percent=(-0.1, 0.1),
-        rotate=(-10.0, 10.0),
-        keep_ratio=False,
-        border_mode=cv2.BORDER_REPLICATE,
-    ),
-    "noise": A.GaussNoise(p=1., std_range=(0.025, 0.025)),
-    "brightness_contrast": A.RandomBrightnessContrast(p=1., brightness_limit=(-0.25, 0.25), contrast_limit=(-0.25, 0.25)),
+    # "affine": A.Affine(
+    #     p=1.,
+    #     scale=(0.95, 1.05),
+    #     translate_percent=(-0.1, 0.1),
+    #     rotate=(-10.0, 10.0),
+    #     keep_ratio=False,
+    #     border_mode=cv2.BORDER_REPLICATE,
+    # ),
+    # "noise": A.GaussNoise(p=1., std_range=(0.025, 0.025)),
+    # "brightness_contrast": A.RandomBrightnessContrast(p=1., brightness_limit=(-0.25, 0.25), contrast_limit=(-0.25, 0.25)),
 }
 
 class Config(dict):

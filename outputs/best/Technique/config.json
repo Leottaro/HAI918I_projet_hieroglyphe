@@ -4,8 +4,8 @@
   "val_ratio": 0.15,
   "test_ratio": 0.15,
   "image_size": 128,
-  "batch_size": 8,
-  "learning_rate": 3e-05,
+  "batch_size": 64,
+  "learning_rate": 0.0003,
   "epochs": 32,
-  "balance_augmentation_factor": 16.0
+  "balance_augmentation_factor": 4.0
 }
