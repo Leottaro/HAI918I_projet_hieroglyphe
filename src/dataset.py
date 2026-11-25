@@ -181,6 +181,18 @@ def read_dataset(image_paths: list[Path], labels: list[str]) -> tuple[dict[str, 
     
     class_to_idx: dict[str, int] = build_class_to_idx(labels)
     
+    too_small_classes = set([label for label, count in label_counts.items() if count < 6])
+    if len(too_small_classes) > 0:
+        print(f"Warning: classes {too_small_classes} have less than 6 items, skipping those...")
+        new_image_paths: list[Path] = []
+        new_labels: list[str] = []
+        for i in range(len(image_paths)):
+            if labels[i] not in too_small_classes:
+                new_image_paths.append(image_paths[i])
+                new_labels.append(labels[i])
+        image_paths = new_image_paths
+        labels = new_labels
+    
     train_samples, val_samples, test_samples = split_dataset(
         image_paths,
         labels,

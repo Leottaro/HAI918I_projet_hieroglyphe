@@ -110,7 +110,8 @@ def main():
     df: pd.DataFrame = pd.read_csv(DATA_DIR / "Tableau_imagette_MB.csv")
     df = df[~df["Deno"].str.match(R"^.* \([0-9]+\)$")] # filter to keep single sign images
     
-    models: list[str] = df.columns[1:].array
+    # models: list[str] = df.columns[1:].array
+    models: list[str] = ["Type de jointure"]
     for model_name in models: 
         print(f"\n\n\n\nTraining {model_name} model...")
         
@@ -151,9 +152,6 @@ def main():
         output_dir: Path = OUTPUT_DIR / CONFIG.getDirName() / model_name
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        config_path = output_dir / f"config.json"
-        config_path.write_text(json.dumps(CONFIG, indent=2))
-        
         model_path = output_dir / f"model.pt"
         torch.save(
             {
@@ -169,12 +167,12 @@ def main():
         
         y_true, y_pred = collect_predictions(model, test_loader)
         matrix_path: Path = output_dir / f"confusion_matrix_{test_accuracy}acc_{test_loss}loss.png"
-        score: float = report_results(y_true, y_pred, class_to_idx, matrix_path, model_name)
+        macro_f1: float = report_results(y_true, y_pred, class_to_idx, matrix_path, model_name)
         
         history_path: Path = output_dir / "training_history.json"
         training_record: dict[str, object] = {
             "config": CONFIG,
-            "score": score,
+            "macro_f1": macro_f1,
             "history": history,
         }
         history_path.write_text(
@@ -184,14 +182,14 @@ def main():
         plot_training_history(history_path, output_dir, model_name)
         
         best_history_path: Path = BEST_CONFIG_DIR / model_name / "training_history.json"
-        best_score: float | None = None
+        best_macro_f1: float | None = None
         if best_history_path.exists():
             try:
-                best_score = float(json.loads(best_history_path.read_text(encoding="utf-8"))["score"])
+                best_macro_f1 = float(json.loads(best_history_path.read_text(encoding="utf-8"))["macro_f1"])
             except (KeyError, TypeError, ValueError, json.JSONDecodeError):
                 pass
 
-        if best_score is None or score > best_score:
+        if best_macro_f1 is None or macro_f1 > best_macro_f1:
             best_model_dir: Path = BEST_CONFIG_DIR / model_name
             if best_model_dir.exists():
                 shutil.rmtree(best_model_dir)

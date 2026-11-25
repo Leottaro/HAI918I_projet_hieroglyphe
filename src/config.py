@@ -50,7 +50,6 @@ class Config(dict):
     epochs: int = 32
     batch_size: int = 32
     learning_rate: float = 1e-4
-    balance_augmentation_factor: float = 32.0
     
     def __init__(self) -> None:
         super().__init__(
@@ -61,8 +60,7 @@ class Config(dict):
             image_size = self.image_size,
             batch_size = self.batch_size,
             learning_rate = self.learning_rate,
-            epochs = self.epochs,
-            balance_augmentation_factor = self.balance_augmentation_factor
+            epochs = self.epochs
         )
 
     def getResizePadTransform(self) -> A.BasicTransform:

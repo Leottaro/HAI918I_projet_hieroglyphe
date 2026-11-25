@@ -1,4 +1,5 @@
 import json
+import pandas as pd
 import torch
 
 import matplotlib.pyplot as plt
@@ -161,6 +162,12 @@ def report_results(y_true: list[int], y_pred: list[int], class_to_idx: dict[str,
         zero_division=0,
     )
 
+    macro_f1 = 0
+    for c in report_metrics:
+        macro_f1 += c["f1-score"]
+    macro_f1 /= len(class_to_idx.keys())
+
+    print(f"Macro F1: {macro_f1:.4f}")
     print(f"Accuracy: {report_metrics['accuracy']:.4f}")
     for average in ("macro avg", "weighted avg"):
         metrics = report_metrics[average]
@@ -206,7 +213,7 @@ def report_results(y_true: list[int], y_pred: list[int], class_to_idx: dict[str,
 
     print(f"Saved confusion matrix to path: {matrix_path}")
 
-    return float(report_metrics["accuracy"])
+    return macro_f1
 
 
 
