@@ -223,7 +223,7 @@ def main():
             continue
         
         output_dir: Path = PROJECT_ROOT / "outputs" / model_name / str(CONFIG.epochs)
-        model_path = output_dir / "model.pt"
+        model_path = output_dir / MODEL_FILE
         
         model: Glyphnet
         trained_class_to_idx: dict[str, int]
@@ -232,11 +232,11 @@ def main():
         except:
             continue
         
-        history_path: Path = output_dir / "training_history.json"
+        history_path: Path = output_dir / TRAINING_HISTORY_FILE
         plot_training_history(history_path, output_dir, model_name)
         
         # draw training curves (loss and accuracy)
-        matrix_path: Path = output_dir / "confusion_matrix.png"
+        matrix_path: Path = output_dir / CONFUSION_MATRIX_FILE
         y_true, y_pred = collect_predictions(model, test_loader)
         report_results(y_true, y_pred, trained_class_to_idx, matrix_path, model_name)
 

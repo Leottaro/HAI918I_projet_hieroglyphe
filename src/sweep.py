@@ -66,16 +66,14 @@ def main() -> None:
             marker = run_dir / DONE_MARKER
             label = f"[{index}/{len(runs)}] {overrides} -> {run_dir.name[:12]}"
 
-            if args.dry_run:
-                print(label)
-                continue
             if marker.exists() and not args.rerun:
                 print(f"{label}  (already done, skipping)")
+                train_all_models(dry_run=True)
                 continue
 
             print(f"\n{'=' * 80}\n{label}\n{'=' * 80}")
             try:
-                train_all_models(False)
+                train_all_models(verbose=False)
             except Exception:
                 traceback.print_exc()
                 failures.append(overrides)

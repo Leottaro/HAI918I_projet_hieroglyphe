@@ -44,6 +44,7 @@ class HieroglyphDataset(Dataset):
 
     def __init__(self, samples: list[Sample], class_to_idx: dict[str, int]):
         super().__init__()
+        self.base_images: dict[Path, tuple[np.ndarray, np.ndarray]] = {sample.path:[CONFIG.getResizePadTransform()(image=np.asarray(Image.open(sample.path).convert("L")))["image"], np.asarray(ImageOps.mirror(Image.fromarray(CONFIG.getResizePadTransform()(image=np.asarray(Image.open(sample.path).convert("L")))["image"])))] for sample in samples}
         self.samples: list[Sample] = samples
         self.class_to_idx: dict[str, int] = class_to_idx
         self.to_tensor: ToTensor = ToTensor()
@@ -60,23 +61,19 @@ class HieroglyphDataset(Dataset):
         
         TRAINING_IMG_LOG_DIR.mkdir(parents=True, exist_ok=True)
         
-        with Image.open(sample.path) as file:
-            image = file.convert("L")
-            
+        image = self.base_images[sample.path][int(sample.flip)]
+        
         if sample.flip:
-            image = ImageOps.mirror(image)
             save_image = True
             img_test_path = img_test_path.with_name(f"{img_test_path.stem}_flip{img_test_path.suffix}")
         
         if sample.augment:
             transform_name = random.choice(list(AUGMENTATION_TRANSFORMS.keys()))
-            image = Image.fromarray(AUGMENTATION_TRANSFORMS[transform_name](image=np.asarray(image))["image"])
+            image = AUGMENTATION_TRANSFORMS[transform_name](image=image)["image"]
             save_image = True
             img_test_path = img_test_path.with_name(f"{img_test_path.stem}_{transform_name}{img_test_path.suffix}")
 
-        # Resize proportionally, then center the image on a black canvas.
-        image = Image.fromarray(CONFIG.getResizePadTransform()(image=np.asarray(image))["image"])
-        
+        image = Image.fromarray(image)
         if save_image and not img_test_path.exists():
             TRAINING_IMG_LOG_DIR.mkdir(parents=True, exist_ok=True)
             image.save(img_test_path)

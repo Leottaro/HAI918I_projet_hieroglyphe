@@ -3,17 +3,25 @@
 from pathlib import Path
 import hashlib
 import json
+import os
 import torch
 import albumentations as A
 import cv2
 
 DEVICE = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
+TORCH_WORKERS = os.cpu_count() or 1
+torch.set_num_threads(TORCH_WORKERS)
+print(f"Using {DEVICE} device with {torch.get_num_threads()} torch workers")
 
 PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
 DATA_DIR: Path = PROJECT_ROOT / "Image_DAO_Sith_Treated"
 TRAINING_IMG_LOG_DIR: Path = PROJECT_ROOT / "Training_Image_DAO_Sith"
 OUTPUT_DIR = PROJECT_ROOT / "outputs"
 BEST_CONFIG_DIR = OUTPUT_DIR / "best"
+
+MODEL_FILE: str = "model.pt"
+CONFUSION_MATRIX_FILE: str = "confusion_matrix.png"
+TRAINING_HISTORY_FILE: str = "training_history.json"
 
 AUGMENTATION_TRANSFORMS = {
     "all": A.Compose([
