@@ -11,9 +11,8 @@ from config import CONFIG, OUTPUT_DIR
 from train import main as train_all_models
 
 SEARCH_SPACE: Final[Mapping[str, tuple[Any, ...]]] = MappingProxyType({
-    "batch_size": (2, 4, 8, 16, 64),
-    "learning_rate": (1e-5, 3e-5, 1.e-4, 3e-4, 1.e-3, 3e-3),
-    "max_augmentation_percent": (0.25, 0.5, 0.75, 1.)
+    "learning_rate": (1e-5, 3e-5, 1.e-4, 3e-4),
+    "max_augmentation_percent": (0.25, 1.)
 })
 RATIO_KEYS: Final[tuple[str, ...]] = ("train_ratio", "val_ratio", "test_ratio")
 DONE_MARKER: Final[str] = ".sweep_done"

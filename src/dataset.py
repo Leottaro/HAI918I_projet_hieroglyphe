@@ -5,6 +5,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 import numpy as np
+import torch
 from PIL import Image, ImageOps
 from torch import Tensor
 from torch.utils.data import Dataset, DataLoader
@@ -13,6 +14,15 @@ from torchvision.transforms import ToTensor
 from sklearn.model_selection import train_test_split
 
 from config import *
+
+
+def seed_worker(worker_id: int) -> None:
+    worker_seed = torch.initial_seed() % (2**32)
+    random.seed(worker_seed)
+    np.random.seed(worker_seed)
+    for transform in AUGMENTATION_TRANSFORMS.values():
+        transform.set_random_seed(worker_seed)
+
 
 def build_class_to_idx(selected_classes: list[str]) -> dict[str, int]:
     if not selected_classes:
@@ -172,6 +182,8 @@ def create_dataloader(
         batch_size=batch_size,
         shuffle=shuffle,
         num_workers=num_workers,
+        worker_init_fn=seed_worker,
+        generator=torch.Generator().manual_seed(CONFIG.seed),
     )
 
     return dataloader

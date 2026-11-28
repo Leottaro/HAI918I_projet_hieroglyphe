@@ -4,6 +4,12 @@ from pathlib import Path
 import hashlib
 import json
 import os
+import random
+
+import numpy as np
+
+os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+
 import torch
 import albumentations as A
 import cv2
@@ -45,8 +51,8 @@ class Config(dict):
     test_ratio: float = 0.15
     
     image_size: int = 128
-    epochs: int = 64
-    batch_size: int = 32
+    epochs: int = 256
+    batch_size: int = 2
     learning_rate: float = 1e-4
     max_augmentation_percent: float = 1.
     
@@ -91,3 +97,17 @@ class Config(dict):
         self[name] = value
 
 CONFIG: Config = Config()
+
+
+def set_seed(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed % (2**32))
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+    torch.use_deterministic_algorithms(True)
+
+    for transform in AUGMENTATION_TRANSFORMS.values():
+        transform.set_random_seed(seed)

@@ -152,7 +152,8 @@ def report_results(y_true: list[int], y_pred: list[int], class_to_idx: dict[str,
         digits=4,
         zero_division=0,
     )
-    print("Report: ", report)
+    if verbose:
+        print("Report: ", report)
 
     report_metrics: dict[str, Any] = classification_report(
         y_true,

@@ -102,7 +102,7 @@ def train_epochs(train_loader, clean_train_loader, val_loader, model, loss_fn, o
             print(f"\tVal loss: {val_loss:.4f}, accuracy: {val_accuracy:.2%}")
         
         if val_accuracy == 1.0 and val_loss == 0.0:
-            print(("\t" if verbose else "") + f"Perfect model, skipping other epoch...")
+            print(("\t" if verbose else "\n") + f"Perfect model, skipping other epoch...")
             break
 
     return history
@@ -147,8 +147,8 @@ def main(verbose: bool = True, dry_run: bool = False):
     if args.quiet or dry_run:
         verbose = False
     
-    torch.manual_seed(CONFIG.seed)
-
+    set_seed(CONFIG.seed)
+    
     df: pd.DataFrame = pd.read_csv(DATA_DIR / "Tableau_imagette_MB.csv")
     df = df[~df["Deno"].str.match(R"^.* \([0-9]+\)$")] # filter to keep single sign images
     
